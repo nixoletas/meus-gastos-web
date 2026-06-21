@@ -126,7 +126,7 @@ export default function AjustesPage() {
       </Section>
 
       <p className="mt-8 text-center text-sm" style={{ color: colors.textMuted }}>
-        Meus Gastos · feito no Brasil 🇧🇷
+        Meus Gastos · feito no Brasil
       </p>
 
       <Modal open={confirmOpen} onClose={() => !deleting && setConfirmOpen(false)} title="Excluir conta" maxWidth={420}>

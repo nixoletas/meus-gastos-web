@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { AppIcon } from '../../src/components/AppIcon';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseModal } from '../../src/components/ExpenseModal';
+import { PiggyMark } from '../../src/components/Mascot';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/theme/ThemeContext';
 
@@ -47,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         style={{ backgroundColor: colors.card, borderRight: `1px solid ${colors.border}` }}
       >
         <div className="mb-6 flex items-center gap-2 px-2 pt-2 text-lg font-extrabold" style={{ color: colors.text }}>
-          <span className="text-2xl">🐷</span> Meus Gastos
+          <PiggyMark size={28} /> Meus Gastos
         </div>
 
         <button
@@ -104,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           style={{ backgroundColor: colors.card, borderBottom: `1px solid ${colors.border}` }}
         >
           <span className="flex items-center gap-2 font-extrabold" style={{ color: colors.text }}>
-            🐷 Meus Gastos
+            <PiggyMark size={24} /> Meus Gastos
           </span>
           <button
             onClick={() => setNewOpen(true)}

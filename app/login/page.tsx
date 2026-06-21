@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { GoogleIcon } from '../../src/components/GoogleIcon';
+import { Mascot } from '../../src/components/Mascot';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/theme/ThemeContext';
 
@@ -32,7 +33,9 @@ export default function LoginPage() {
         className="w-full max-w-sm rounded-3xl p-8 text-center shadow-xl"
         style={{ backgroundColor: colors.card }}
       >
-        <div className="mb-4 text-6xl">🐷</div>
+        <div className="mb-4 flex justify-center">
+          <Mascot size={120} />
+        </div>
         <h1 className="text-3xl font-extrabold" style={{ color: colors.text }}>
           Meus Gastos
         </h1>

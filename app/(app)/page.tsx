@@ -61,7 +61,7 @@ export default function DashboardPage() {
       {loading ? (
         <Empty colors={colors} icon="loading" text="Carregando…" />
       ) : groups.length === 0 ? (
-        <Empty colors={colors} icon="emoticon-happy-outline" text="Nenhum gasto no período. Que economia! 🎉" />
+        <Empty colors={colors} icon="emoticon-happy-outline" text="Nenhum gasto no período. Que economia!" />
       ) : (
         <div className="space-y-6">
           {groups.map(([day, items]) => (
