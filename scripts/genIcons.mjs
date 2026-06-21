@@ -36,6 +36,7 @@ const UI = [
   'home', 'shape', 'target', 'chart-donut', 'cog', 'plus', 'account', 'pencil',
   'trash-can-outline', 'message-text-outline', 'email-outline', 'shield-lock-outline',
   'file-document-outline', 'information-outline', 'open-in-new', 'chevron-right',
+  'chevron-up', 'chevron-down',
   'logout', 'account-remove', 'white-balance-sunny', 'weather-night', 'laptop',
   'cash-multiple', 'dots-horizontal', 'emoticon-happy-outline', 'loading', 'tag',
 ];

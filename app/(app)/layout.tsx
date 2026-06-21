@@ -98,7 +98,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Conteúdo */}
-      <main className="flex-1">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         {/* Top bar mobile */}
         <div
           className="flex items-center justify-between p-4 md:hidden"
@@ -116,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <div className="mx-auto w-full max-w-6xl p-6 lg:p-10">{children}</div>
+        <div className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6 lg:p-10">{children}</div>
 
         {/* Nav inferior mobile */}
         <nav

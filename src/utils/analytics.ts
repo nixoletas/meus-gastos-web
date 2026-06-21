@@ -130,6 +130,39 @@ export function subcategoryBreakdown(
     .sort((a, b) => b.total - a.total);
 }
 
+/**
+ * Lista os lançamentos individuais de uma subcategoria (ou "Sem subcategoria")
+ * dentro de uma categoria-mãe, no período. `subKey` é o `key` vindo de
+ * {@link subcategoryBreakdown} ('__none__' para lançamentos direto na mãe).
+ */
+export function subcategoryExpenses(
+  expenses: Expense[],
+  categories: Category[],
+  parentId: string,
+  subKey: string,
+  ref: Date,
+  period: Period
+): Expense[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+
+  return expenses
+    .filter((e) => {
+      if (!isInPeriod(e.occurred_at, ref, period)) return false;
+
+      let subId: string | null = null;
+      const sub = e.subcategory_id ? byId.get(e.subcategory_id) : undefined;
+      const cat = e.category_id ? byId.get(e.category_id) : undefined;
+
+      if (sub?.parent_id === parentId) subId = sub.id;
+      else if (cat?.parent_id === parentId) subId = cat.id;
+      else if (e.category_id === parentId) subId = null;
+      else return false;
+
+      return (subId ?? '__none__') === subKey;
+    })
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+}
+
 export type BudgetAlert = {
   budget: Budget;
   category: Category | undefined;
