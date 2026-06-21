@@ -1,5 +1,5 @@
-import * as mdi from '@mdi/js';
 import { BRAND_ICONS } from '../data/brandIcons';
+import { FALLBACK_ICON, ICON_PATHS } from '../data/iconPaths';
 
 type Props = {
   /** Nome do ícone: glyph do MDI ("silverware-fork-knife") ou "brand:<marca>". */
@@ -9,23 +9,12 @@ type Props = {
   className?: string;
 };
 
-const mdiMap = mdi as unknown as Record<string, string>;
-
-/** Converte "silverware-fork-knife" -> "mdiSilverwareForkKnife". */
-function toMdiKey(name: string): string {
-  const pascal = name
-    .split('-')
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join('');
-  return `mdi${pascal}`;
-}
-
 function resolvePath(icon: string): string {
   if (icon.startsWith('brand:')) {
     const brand = BRAND_ICONS[icon.slice(6)];
     if (brand) return brand.path;
   }
-  return mdiMap[toMdiKey(icon)] ?? mdi.mdiTag;
+  return ICON_PATHS[icon] ?? FALLBACK_ICON;
 }
 
 /** Renderiza um ícone (MDI ou marca) como SVG 24x24. */

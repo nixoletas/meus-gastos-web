@@ -6,10 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gen:icons": "node scripts/genIcons.mjs"
   },
   "dependencies": {
-    "@mdi/js": "^7.4.47",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "next": "15.1.6",
@@ -17,6 +17,7 @@
     "react-dom": "19.0.0"
   },
   "devDependencies": {
+    "@mdi/js": "^7.4.47",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
