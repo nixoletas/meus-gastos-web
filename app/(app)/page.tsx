@@ -70,7 +70,7 @@ export default function DashboardPage() {
                 <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>
                   {dateHeaderLabel(day)}
                 </span>
-                <span className="text-[10px] font-semibold" style={{ color: colors.textMuted }}>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>
                   {formatBRL(items.reduce((s, e) => s + e.amount, 0))}
                 </span>
               </div>
