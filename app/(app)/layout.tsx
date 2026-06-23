@@ -31,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: colors.background }}>
+      <div className="flex min-h-dvh items-center justify-center" style={{ backgroundColor: colors.background }}>
         <span
           className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
           style={{ color: colors.primary }}
@@ -41,10 +41,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ backgroundColor: colors.background }}>
+    <div className="flex min-h-dvh" style={{ backgroundColor: colors.background }}>
       {/* Sidebar */}
       <aside
-        className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col p-4 md:flex"
+        className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col p-4 md:flex"
         style={{ backgroundColor: colors.card, borderRight: `1px solid ${colors.border}` }}
       >
         <div className="mb-6 flex items-center gap-2 px-2 pt-2 text-lg font-extrabold" style={{ color: colors.text }}>
@@ -98,7 +98,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Conteúdo */}
-      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <main className="flex min-h-dvh min-w-0 flex-1 flex-col">
         {/* Top bar mobile */}
         <div
           className="flex items-center justify-between p-4 md:hidden"
