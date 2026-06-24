@@ -97,7 +97,7 @@ export default function AjustesPage() {
       <Section colors={colors} label="SOBRE">
         <Row colors={colors} icon="message-text-outline" label="Reclamar, pedir feature ou tirar dúvida" href={FEEDBACK_FORM_URL} external />
         <Divider colors={colors} />
-        <Row colors={colors} icon="email-outline" label="Falar com a gente" href={`mailto:${CONTACT_EMAIL}`} external />
+        <CopyEmailRow colors={colors} email={CONTACT_EMAIL} />
         <Divider colors={colors} />
         <Row colors={colors} icon="shield-lock-outline" label="Política de Privacidade" href="/legal/privacy" />
         <Divider colors={colors} />
@@ -175,6 +175,30 @@ function Row({ colors, icon, label, href, external }: { colors: any; icon: strin
     return <a href={href} target="_blank" rel="noopener noreferrer">{content}</a>;
   }
   return <Link href={href}>{content}</Link>;
+}
+
+function CopyEmailRow({ colors, email }: { colors: any; email: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(email);
+    } catch {
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+  return (
+    <button onClick={copy} className="flex w-full items-center gap-3 py-3 text-left" title={email}>
+      <AppIcon icon={copied ? 'check-circle' : 'email-outline'} size={20} color={copied ? colors.primary : colors.textMuted} />
+      <span className="flex-1 text-sm font-semibold transition-colors" style={{ color: copied ? colors.primary : colors.text }}>
+        {copied ? 'E-mail copiado!' : 'Falar com a gente'}
+      </span>
+      <span className="inline-block transition-transform duration-200" style={{ transform: copied ? 'scale(1.2)' : 'scale(1)' }}>
+        <AppIcon icon={copied ? 'check' : 'content-copy'} size={18} color={copied ? colors.primary : colors.textMuted} />
+      </span>
+    </button>
+  );
 }
 
 function Divider({ colors }: { colors: any }) {
