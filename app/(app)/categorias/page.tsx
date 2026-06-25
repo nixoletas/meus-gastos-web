@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../../src/components/CategoryIcon';
 import { CategoryModal } from '../../../src/components/CategoryModal';
 import { useData } from '../../../src/context/DataContext';
+import { normalize } from '../../../src/data/icons';
 import { useTheme } from '../../../src/theme/ThemeContext';
-import { Category } from '../../../src/types';
+import { Category, CategoryWithSubs } from '../../../src/types';
 
 type ModalState =
   | { mode: 'closed' }
@@ -18,8 +19,24 @@ export default function CategoriasPage() {
   const { colors } = useTheme();
   const { categoriesWithSubs } = useData();
   const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
+  const [query, setQuery] = useState('');
 
   const close = () => setModal({ mode: 'closed' });
+
+  // Filtra por categoria ou subcategoria (busca sem acento/maiúsculas).
+  const filtered = useMemo(() => {
+    const q = normalize(query.trim());
+    if (!q) return categoriesWithSubs;
+    return categoriesWithSubs
+      .map((cat) => {
+        const catMatches = normalize(cat.name).includes(q);
+        const subs = cat.subcategories.filter((s) => normalize(s.name).includes(q));
+        if (catMatches) return cat;
+        if (subs.length > 0) return { ...cat, subcategories: subs };
+        return null;
+      })
+      .filter((c): c is CategoryWithSubs => c !== null);
+  }, [categoriesWithSubs, query]);
 
   return (
     <div>
@@ -34,8 +51,50 @@ export default function CategoriasPage() {
         </button>
       </div>
 
+      {/* Busca */}
+      <div
+        className="mb-5 flex items-center gap-2 rounded-xl border px-3"
+        style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      >
+        <AppIcon icon="magnify" size={20} color={colors.textMuted} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar categoria ou subcategoria"
+          className="h-11 flex-1 bg-transparent text-sm outline-none"
+          style={{ color: colors.text }}
+        />
+        {query.length > 0 && (
+          <button onClick={() => setQuery('')} aria-label="Limpar" className="transition hover:opacity-70">
+            <AppIcon icon="close-circle" size={18} color={colors.textMuted} />
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <button
+          onClick={() => setModal({ mode: 'new-parent' })}
+          className="flex w-full items-center gap-3 rounded-2xl border border-dashed p-4 text-left transition hover:opacity-90"
+          style={{ backgroundColor: colors.card, borderColor: colors.primary }}
+        >
+          <span
+            className="flex h-11 w-11 items-center justify-center rounded-xl"
+            style={{ backgroundColor: hexWithAlpha(colors.primary, 0.16) }}
+          >
+            <AppIcon icon="plus" size={22} color={colors.primary} />
+          </span>
+          <span>
+            <span className="block font-bold" style={{ color: colors.text }}>
+              {query.trim() ? `Criar “${query.trim()}”` : 'Nova categoria'}
+            </span>
+            <span className="block text-sm" style={{ color: colors.textMuted }}>
+              Nenhuma categoria encontrada. Toque para criar uma nova.
+            </span>
+          </span>
+        </button>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2">
-        {categoriesWithSubs.map((cat) => (
+        {filtered.map((cat) => (
           <div key={cat.id} className="rounded-2xl p-4" style={{ backgroundColor: colors.card }}>
             <div className="flex items-center gap-3">
               <CategoryIcon icon={cat.icon} color={cat.color} size={44} solid />
@@ -73,6 +132,7 @@ export default function CategoriasPage() {
           </div>
         ))}
       </div>
+      )}
 
       <CategoryModal
         open={modal.mode === 'new-parent'}
