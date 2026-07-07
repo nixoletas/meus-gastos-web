@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../theme/ThemeContext';
 import { Expense } from '../types';
 import { maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
-import { toISODate } from '../utils/date';
+import { fromISODate, relativeDayLabel, toISODate } from '../utils/date';
 import { AppIcon } from './AppIcon';
-import { CategoryIcon, hexWithAlpha } from './CategoryIcon';
+import { Calendar } from './Calendar';
+import { hexWithAlpha } from './CategoryIcon';
 import { Modal } from './Modal';
 
 type Props = {
@@ -26,10 +27,12 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const [date, setDate] = useState(toISODate(new Date()));
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Preenche ao abrir (novo ou edição).
   useEffect(() => {
     if (!open) return;
+    setShowCalendar(false);
     if (expense) {
       setRaw(reaisToRaw(expense.amount));
       setCategoryId(expense.category_id);
@@ -48,6 +51,17 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const amount = rawToReais(raw);
   const selectedParent = categoriesWithSubs.find((c) => c.id === categoryId);
   const canSave = amount > 0 && categoryId;
+
+  const quickDates = useMemo(() => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    return [
+      { label: 'Hoje', value: toISODate(today) },
+      { label: 'Ontem', value: toISODate(yesterday) },
+    ];
+  }, []);
+  const isQuickDate = quickDates.some((q) => q.value === date);
 
   async function handleSave() {
     if (!canSave) return;
@@ -108,11 +122,11 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
               className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition"
               style={{
                 backgroundColor: active ? hexWithAlpha(cat.color, 0.16) : colors.surface,
-                borderColor: active ? cat.color : 'transparent',
-                color: active ? cat.color : colors.text,
+                borderColor: active ? cat.color : colors.border,
+                color: active ? colors.text : colors.textMuted,
               }}
             >
-              <AppIcon icon={cat.icon} size={16} color={active ? cat.color : colors.textMuted} />
+              <AppIcon icon={cat.icon} size={16} color={cat.color} />
               {cat.name}
             </button>
           );
@@ -135,10 +149,10 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
                   style={{
                     backgroundColor: active ? hexWithAlpha(selectedParent.color, 0.16) : colors.surface,
                     borderColor: active ? selectedParent.color : 'transparent',
-                    color: active ? selectedParent.color : colors.textMuted,
+                    color: active ? colors.text : colors.textMuted,
                   }}
                 >
-                  <AppIcon icon={sub.icon} size={14} color={active ? selectedParent.color : colors.textMuted} />
+                  <AppIcon icon={sub.icon} size={14} color={selectedParent.color} />
                   {sub.name}
                 </button>
               );
@@ -147,29 +161,64 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         </>
       )}
 
-      {/* Data + nota */}
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Data</Label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
-          />
-        </div>
-        <div>
-          <Label>Nota (opcional)</Label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="ex.: almoço com a equipe"
-            className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
-          />
-        </div>
+      {/* Data */}
+      <Label>Quando</Label>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {quickDates.map((q) => {
+          const active = q.value === date;
+          return (
+            <button
+              key={q.label}
+              type="button"
+              onClick={() => {
+                setDate(q.value);
+                setShowCalendar(false);
+              }}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+              style={{
+                backgroundColor: active ? colors.primary : colors.surface,
+                color: active ? colors.onPrimary : colors.textMuted,
+              }}
+            >
+              {q.label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setShowCalendar((v) => !v)}
+          className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+          style={{
+            backgroundColor: showCalendar ? colors.primarySoft : colors.surface,
+            color: colors.text,
+          }}
+        >
+          <AppIcon icon="calendar-month" size={16} color={colors.primary} />
+          {isQuickDate ? 'Outra data' : relativeDayLabel(date)}
+        </button>
       </div>
+
+      {showCalendar && (
+        <div className="mb-4">
+          <Calendar
+            selected={fromISODate(date)}
+            onSelect={(d) => {
+              setDate(toISODate(d));
+              setShowCalendar(false);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Nota */}
+      <Label>Nota (opcional)</Label>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="ex.: almoço com a equipe"
+        className="mb-4 w-full rounded-xl border px-3 py-2.5 text-sm outline-none"
+        style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
+      />
 
       <div className="mt-6 flex items-center gap-3">
         {expense && (

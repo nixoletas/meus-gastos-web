@@ -38,6 +38,9 @@ type DataContextValue = {
   categoriesWithSubs: CategoryWithSubs[];
   getCategory: (id: string | null) => Category | undefined;
   refresh: () => Promise<void>;
+  /** Preferência de ocultar o valor total, sincronizada entre web e app. */
+  hideValue: boolean;
+  setHideValue: (value: boolean) => Promise<void>;
   addExpense: (input: NewExpense) => Promise<Expense | null>;
   updateExpense: (id: string, input: Partial<NewExpense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
@@ -64,6 +67,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [hideValue, setHideValueState] = useState(false);
 
   const seedDefaults = useCallback(
     async (uid: string): Promise<Category[]> => {
@@ -114,7 +118,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
     setLoading(true);
     try {
-      const [catRes, expRes, budRes] = await Promise.all([
+      const [catRes, expRes, budRes, settingsRes] = await Promise.all([
         supabase.from('categories').select('*').order('created_at'),
         supabase
           .from('expenses')
@@ -122,6 +126,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           .order('occurred_at', { ascending: false })
           .order('created_at', { ascending: false }),
         supabase.from('budgets').select('*'),
+        supabase.from('user_settings').select('hide_value').maybeSingle(),
       ]);
 
       let cats = (catRes.data ?? []) as Category[];
@@ -132,6 +137,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCategories(cats);
       setExpenses((expRes.data ?? []) as Expense[]);
       setBudgets((budRes.data ?? []) as Budget[]);
+      setHideValueState(settingsRes.data?.hide_value ?? false);
     } finally {
       setLoading(false);
     }
@@ -144,6 +150,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCategories([]);
       setExpenses([]);
       setBudgets([]);
+      setHideValueState(false);
       setLoading(false);
     }
   }, [userId, loadAll]);
@@ -200,6 +207,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const row = payload.new as Budget;
             return [...prev.filter((b) => b.id !== row.id), row];
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_settings', filter },
+        (payload) => {
+          if (payload.eventType === 'DELETE') return;
+          setHideValueState((payload.new as { hide_value: boolean }).hide_value);
         }
       )
       .subscribe();
@@ -334,6 +349,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [supabase]
   );
 
+  const setHideValue = useCallback(
+    async (value: boolean) => {
+      if (!userId) return;
+      setHideValueState(value);
+      await supabase
+        .from('user_settings')
+        .upsert({ user_id: userId, hide_value: value, updated_at: new Date().toISOString() });
+    },
+    [userId, supabase]
+  );
+
   const value = useMemo<DataContextValue>(
     () => ({
       loading,
@@ -352,6 +378,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCategory,
       setBudget,
       deleteBudget,
+      hideValue,
+      setHideValue,
     }),
     [
       loading,
@@ -370,6 +398,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCategory,
       setBudget,
       deleteBudget,
+      hideValue,
+      setHideValue,
     ]
   );
 

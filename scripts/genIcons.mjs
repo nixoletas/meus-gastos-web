@@ -36,9 +36,10 @@ const UI = [
   'home', 'shape', 'target', 'chart-donut', 'cog', 'plus', 'account', 'pencil',
   'trash-can-outline', 'message-text-outline', 'email-outline', 'shield-lock-outline',
   'file-document-outline', 'information-outline', 'open-in-new', 'chevron-right',
-  'chevron-up', 'chevron-down',
+  'chevron-up', 'chevron-down', 'chevron-left', 'calendar-month', 'calendar-today',
   'logout', 'account-remove', 'white-balance-sunny', 'weather-night', 'laptop',
   'cash-multiple', 'dots-horizontal', 'emoticon-happy-outline', 'loading', 'tag',
+  'eye', 'eye-off',
 ];
 
 const names = [...new Set([...CATALOG, ...DEFAULTS, ...UI])].sort();

@@ -22,12 +22,12 @@ import {
 
 export default function DashboardPage() {
   const { colors } = useTheme();
-  const { expenses, categories, budgets, getCategory, loading } = useData();
+  const { expenses, categories, budgets, getCategory, loading, hideValue, setHideValue } =
+    useData();
   const { session } = useAuth();
   const [date, setDate] = useState(new Date());
   const [period, setPeriod] = useState<Period>('month');
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [hideValue, setHideValue] = useState(false);
 
   // Primeiro nome: nome do Google quando houver; senão deriva do e-mail.
   const firstName = useMemo(() => {
@@ -100,38 +100,38 @@ export default function DashboardPage() {
         style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.primary}cc)` }}
       >
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold opacity-90" style={{ color: colors.onPrimary }}>
+          <div className="text-sm font-semibold" style={{ color: hexWithAlpha('#FFFFFF', 0.9) }}>
             Total gasto {period === 'month' ? 'no mês' : 'no ano'}
           </div>
           <button
-            onClick={() => setHideValue((v) => !v)}
+            onClick={() => setHideValue(!hideValue)}
             className="flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-90"
             style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.22) }}
             aria-label={hideValue ? 'Mostrar valor' : 'Ocultar valor'}
           >
-            <AppIcon icon={hideValue ? 'eye-off' : 'eye'} size={18} color={colors.onPrimary} />
+            <AppIcon icon={hideValue ? 'eye-off' : 'eye'} size={18} color="#FFFFFF" />
           </button>
         </div>
-        <div className="mt-1 text-5xl font-extrabold" style={{ color: colors.onPrimary }}>
+        <div className="mt-1 text-5xl font-extrabold" style={{ color: '#FFFFFF' }}>
           {hideValue ? '•••••' : `${total > 0 ? '− ' : ''}${formatBRL(total)}`}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <span
             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold"
-            style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.18), color: colors.onPrimary }}
+            style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.18), color: '#FFFFFF' }}
           >
-            <AppIcon icon="receipt-text-outline" size={14} color={colors.onPrimary} />
+            <AppIcon icon="receipt-text-outline" size={14} color="#FFFFFF" />
             {list.length} {list.length === 1 ? 'lançamento' : 'lançamentos'}
           </span>
           {trend !== null && (
             <span
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold"
-              style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.18), color: colors.onPrimary }}
+              style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.18), color: '#FFFFFF' }}
             >
               <AppIcon
                 icon={trend > 0 ? 'trending-up' : trend < 0 ? 'trending-down' : 'trending-neutral'}
                 size={14}
-                color={colors.onPrimary}
+                color="#FFFFFF"
               />
               {trend > 0 ? '+' : ''}
               {Math.round(trend * 100)}% vs {period === 'month' ? 'mês' : 'ano'} anterior
