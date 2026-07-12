@@ -39,7 +39,7 @@ const UI = [
   'chevron-up', 'chevron-down', 'chevron-left', 'calendar-month', 'calendar-today',
   'logout', 'account-remove', 'white-balance-sunny', 'weather-night', 'laptop',
   'cash-multiple', 'dots-horizontal', 'emoticon-happy-outline', 'loading', 'tag',
-  'eye', 'eye-off',
+  'eye', 'eye-off', 'file-excel', 'calendar-blank-multiple', 'email-fast', 'download',
 ];
 
 const names = [...new Set([...CATALOG, ...DEFAULTS, ...UI])].sort();

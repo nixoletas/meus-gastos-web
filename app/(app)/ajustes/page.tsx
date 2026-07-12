@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { hexWithAlpha } from '../../../src/components/CategoryIcon';
 import { Modal } from '../../../src/components/Modal';
+import { ReportExportModal } from '../../../src/components/ReportExportModal';
 import { useAuth } from '../../../src/context/AuthContext';
 import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../../src/legal/content';
 import { ThemePreference, useTheme } from '../../../src/theme/ThemeContext';
@@ -19,6 +20,7 @@ export default function AjustesPage() {
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const meta = (user?.user_metadata ?? {}) as Record<string, string>;
   const avatar = meta.avatar_url ?? meta.picture;
@@ -93,6 +95,23 @@ export default function AjustesPage() {
         </button>
       </Section>
 
+      {/* Relatórios */}
+      <Section colors={colors} label="RELATÓRIOS">
+        <button
+          onClick={() => setReportOpen(true)}
+          className="flex w-full items-center gap-3 text-left transition hover:opacity-80"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: colors.primarySoft }}>
+            <AppIcon icon="file-excel" size={22} color={colors.primary} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold" style={{ color: colors.text }}>Exportar para Excel</div>
+            <div className="text-sm" style={{ color: colors.textMuted }}>Relatório mensal ou anual no seu e-mail</div>
+          </div>
+          <AppIcon icon="chevron-right" size={20} color={colors.textMuted} />
+        </button>
+      </Section>
+
       {/* Sobre */}
       <Section colors={colors} label="SOBRE">
         <Row colors={colors} icon="message-text-outline" label="Reclamar, pedir feature ou tirar dúvida" href={FEEDBACK_FORM_URL} external />
@@ -150,6 +169,8 @@ export default function AjustesPage() {
           {deleting ? 'Excluindo…' : 'Excluir minha conta'}
         </button>
       </Modal>
+
+      <ReportExportModal open={reportOpen} onClose={() => setReportOpen(false)} userEmail={user?.email} />
     </div>
   );
 }
