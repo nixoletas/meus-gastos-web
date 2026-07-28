@@ -57,6 +57,22 @@ type DataContextValue = {
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
 
+const sortExpenses = (list: Expense[]) =>
+  [...list].sort((a, b) =>
+    a.occurred_at === b.occurred_at
+      ? b.created_at.localeCompare(a.created_at)
+      : b.occurred_at.localeCompare(a.occurred_at)
+  );
+
+/** Insere ou substitui a linha pelo id, evitando duplicar o que o realtime já trouxe. */
+const upsertById = <T extends { id: string }>(list: T[], row: T) => {
+  const index = list.findIndex((item) => item.id === row.id);
+  if (index === -1) return [...list, row];
+  const next = [...list];
+  next[index] = row;
+  return next;
+};
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const { session } = useAuth();
@@ -160,13 +176,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
     const filter = `user_id=eq.${userId}`;
 
-    const sortExpenses = (list: Expense[]) =>
-      [...list].sort((a, b) =>
-        a.occurred_at === b.occurred_at
-          ? b.created_at.localeCompare(a.created_at)
-          : b.occurred_at.localeCompare(a.occurred_at)
-      );
-
     const channel = supabase
       .channel('realtime-meus-gastos')
       .on(
@@ -178,7 +187,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               return prev.filter((e) => e.id !== (payload.old as Expense).id);
             }
             const row = payload.new as Expense;
-            return sortExpenses([row, ...prev.filter((e) => e.id !== row.id)]);
+            return sortExpenses(upsertById(prev, row));
           });
         }
       )
@@ -192,7 +201,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               return prev.filter((c) => c.id !== id && c.parent_id !== id);
             }
             const row = payload.new as Category;
-            return [...prev.filter((c) => c.id !== row.id), row];
+            return upsertById(prev, row);
           });
         }
       )
@@ -205,7 +214,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               return prev.filter((b) => b.id !== (payload.old as Budget).id);
             }
             const row = payload.new as Budget;
-            return [...prev.filter((b) => b.id !== row.id), row];
+            return upsertById(prev, row);
           });
         }
       )
@@ -247,7 +256,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .single();
       if (error || !data) return null;
       const expense = data as Expense;
-      setExpenses((prev) => [expense, ...prev]);
+      setExpenses((prev) => sortExpenses(upsertById(prev, expense)));
       return expense;
     },
     [userId, supabase]
@@ -262,7 +271,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select()
         .single();
       if (error || !data) return;
-      setExpenses((prev) => prev.map((e) => (e.id === id ? (data as Expense) : e)));
+      setExpenses((prev) => sortExpenses(upsertById(prev, data as Expense)));
     },
     [supabase]
   );
@@ -285,7 +294,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .single();
       if (error || !data) return null;
       const cat = data as Category;
-      setCategories((prev) => [...prev, cat]);
+      setCategories((prev) => upsertById(prev, cat));
       return cat;
     },
     [userId, supabase]
@@ -300,7 +309,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .select()
         .single();
       if (error || !data) return;
-      setCategories((prev) => prev.map((c) => (c.id === id ? (data as Category) : c)));
+      setCategories((prev) => upsertById(prev, data as Category));
     },
     [supabase]
   );
