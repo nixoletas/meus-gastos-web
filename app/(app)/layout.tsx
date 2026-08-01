@@ -25,6 +25,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
 
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  /** Clicar no item da página atual volta ao topo em vez de não fazer nada. */
+  function handleNavClick(e: React.MouseEvent, href: string) {
+    if (!isActive(href)) return;
+    e.preventDefault();
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+  }
+
   const meta = (user?.user_metadata ?? {}) as Record<string, string>;
   const avatar = meta.avatar_url ?? meta.picture;
   const displayName = meta.full_name ?? meta.name ?? user?.email ?? '';
@@ -61,11 +72,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {
-            const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
                 style={{
                   backgroundColor: active ? hexWithAlpha(colors.primary, 0.14) : 'transparent',
@@ -124,9 +136,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           style={{ backgroundColor: colors.card, borderTop: `1px solid ${colors.border}` }}
         >
           {NAV.map((item) => {
-            const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+            const active = isActive(item.href);
             return (
-              <Link key={item.href} href={item.href} className="flex flex-col items-center gap-0.5 px-3 py-1">
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className="flex flex-col items-center gap-0.5 px-3 py-1"
+              >
                 <AppIcon icon={item.icon} size={22} color={active ? colors.primary : colors.textMuted} />
                 <span className="text-[10px] font-semibold" style={{ color: active ? colors.primary : colors.textMuted }}>
                   {item.label}

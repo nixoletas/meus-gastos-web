@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { CategoryIcon } from '../../../src/components/CategoryIcon';
 import { DonutChart } from '../../../src/components/DonutChart';
@@ -23,6 +23,7 @@ export default function GraficosPage() {
   const [period, setPeriod] = useState<Period>('month');
   const [selected, setSelected] = useState<string | null>(null);
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
+  const legendRefs = useRef(new Map<string, HTMLButtonElement>());
 
   function toggleSub(key: string) {
     setExpandedSubs((prev) => {
@@ -47,7 +48,17 @@ export default function GraficosPage() {
   const slices = totals.map((t) => ({
     value: t.total,
     color: t.category?.color ?? colors.textMuted,
+    label: `${t.category?.name ?? 'Sem categoria'} · ${formatBRL(t.total)}`,
   }));
+
+  const activeIndex = selected ? totals.findIndex((t) => t.categoryId === selected) : -1;
+  const activeTotal = activeIndex >= 0 ? totals[activeIndex] : null;
+
+  // Selecionar pela pizza precisa trazer o item correspondente da legenda pra vista.
+  useEffect(() => {
+    if (!selected) return;
+    legendRefs.current.get(selected)?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
 
   const breakdown = useMemo(
     () => (selected ? subcategoryBreakdown(expenses, categories, selected, date, period) : []),
@@ -69,22 +80,55 @@ export default function GraficosPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Donut */}
           <div className="flex flex-col items-center justify-center rounded-3xl p-8" style={{ backgroundColor: colors.card }}>
-            <DonutChart data={slices} size={240} thickness={32} trackColor={colors.surface}>
-              <div className="text-xs font-semibold" style={{ color: colors.textMuted }}>Total</div>
-              <div className="text-2xl font-extrabold" style={{ color: colors.text }}>{formatBRL(total)}</div>
+            <DonutChart
+              data={slices}
+              size={240}
+              thickness={32}
+              trackColor={colors.surface}
+              activeIndex={activeIndex >= 0 ? activeIndex : null}
+              onSelect={(i) => selectCategory(totals[i].categoryId)}
+            >
+              <div className="text-xs font-semibold" style={{ color: colors.textMuted }}>
+                {activeTotal ? activeTotal.category?.name ?? 'Sem categoria' : 'Total'}
+              </div>
+              <div className="text-2xl font-extrabold" style={{ color: colors.text }}>
+                {formatBRL(activeTotal ? activeTotal.total : total)}
+              </div>
+              {activeTotal && (
+                <div className="mt-0.5 text-xs font-semibold" style={{ color: colors.textMuted }}>
+                  {(activeTotal.percent * 100).toFixed(0)}% do período
+                </div>
+              )}
             </DonutChart>
+
+            <p className="mt-4 text-center text-xs" style={{ color: colors.textMuted }}>
+              {activeTotal
+                ? 'Clique de novo na fatia para ver tudo.'
+                : 'Clique em uma fatia para filtrar a categoria.'}
+            </p>
           </div>
 
-          {/* Legenda / lista */}
-          <div className="space-y-2">
+          {/* Legenda / lista — altura travada pra não empurrar o gráfico pra fora da tela. */}
+          <div className="max-h-104 space-y-2 overflow-y-auto p-1">
             {totals.map((t) => {
               const active = selected === t.categoryId;
+              const dimmed = selected !== null && !active;
               return (
                 <button
                   key={t.categoryId ?? 'none'}
+                  ref={(el) => {
+                    if (t.categoryId) {
+                      if (el) legendRefs.current.set(t.categoryId, el);
+                      else legendRefs.current.delete(t.categoryId);
+                    }
+                  }}
                   onClick={() => selectCategory(t.categoryId)}
                   className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition hover:opacity-90"
-                  style={{ backgroundColor: colors.card, outline: active ? `2px solid ${t.category?.color ?? colors.primary}` : 'none' }}
+                  style={{
+                    backgroundColor: colors.card,
+                    outline: active ? `2px solid ${t.category?.color ?? colors.primary}` : 'none',
+                    opacity: dimmed ? 0.5 : 1,
+                  }}
                 >
                   <CategoryIcon icon={t.category?.icon ?? 'tag'} color={t.category?.color ?? colors.textMuted} size={40} />
                   <div className="flex-1">
@@ -106,9 +150,18 @@ export default function GraficosPage() {
       {/* Detalhe por subcategoria */}
       {selected && breakdown.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
-            {getCategory(selected)?.name} · por subcategoria
-          </h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-bold" style={{ color: colors.text }}>
+              {getCategory(selected)?.name} · por subcategoria
+            </h2>
+            <button
+              onClick={() => selectCategory(null)}
+              className="rounded-full px-3 py-1.5 text-xs font-bold transition hover:opacity-80"
+              style={{ backgroundColor: colors.surface, color: colors.textMuted }}
+            >
+              ✕ Limpar filtro
+            </button>
+          </div>
           <div className="space-y-2">
             {breakdown.map((b) => {
               const open = expandedSubs.has(b.key);
