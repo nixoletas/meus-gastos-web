@@ -7,6 +7,7 @@ import { Category } from '../types';
 import { categoryPalette } from '../theme/colors';
 import { CategoryIcon } from './CategoryIcon';
 import { ColorPicker } from './ColorPicker';
+import { ConfirmDialog } from './ConfirmDialog';
 import { IconPicker } from './IconPicker';
 import { Modal } from './Modal';
 
@@ -29,9 +30,12 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
   const [icon, setIcon] = useState('tag');
   const [color, setColor] = useState(categoryPalette[0]);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setConfirmDelete(false);
     if (category) {
       setName(category.name);
       setIcon(category.icon);
@@ -64,11 +68,10 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
 
   async function handleDelete() {
     if (!category) return;
-    const msg = isSub
-      ? 'Excluir esta subcategoria?'
-      : 'Excluir esta categoria e todas as suas subcategorias?';
-    if (!confirm(msg)) return;
+    setDeleting(true);
     await deleteCategory(category.id);
+    setDeleting(false);
+    setConfirmDelete(false);
     onClose();
   }
 
@@ -111,7 +114,7 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
       <div className="mt-6 flex items-center gap-3">
         {category && (
           <button
-            onClick={handleDelete}
+            onClick={() => setConfirmDelete(true)}
             className="rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-80"
             style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
           >
@@ -127,6 +130,19 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
           {saving ? 'Salvando…' : 'Salvar'}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={isSub ? 'Excluir esta subcategoria?' : 'Excluir esta categoria?'}
+        message={
+          isSub
+            ? 'Os gastos lançados nela continuam no histórico, sem subcategoria.'
+            : 'As subcategorias e o limite dela também somem. Os gastos continuam no histórico, sem categoria.'
+        }
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </Modal>
   );
 }

@@ -1,21 +1,41 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../theme/ThemeContext';
 import { Expense } from '../types';
-import { maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
+import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
 import { fromISODate, relativeDayLabel, toISODate } from '../utils/date';
 import { AppIcon } from './AppIcon';
 import { Calendar } from './Calendar';
 import { hexWithAlpha } from './CategoryIcon';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Modal } from './Modal';
+import { SuccessFlash } from './SuccessFlash';
 
 type Props = {
   open: boolean;
   onClose: () => void;
   expense?: Expense | null;
 };
+
+const LAST_DATE_KEY = 'mg:ultima-data-gasto';
+
+/**
+ * Última data usada em um novo gasto. Fica na sessão do navegador para quem
+ * está lançando um mês inteiro de uma vez não precisar reabrir o calendário
+ * a cada gasto — e some ao fechar a aba, evitando lançar em data antiga sem querer.
+ */
+function readRememberedDate(): string | null {
+  if (typeof window === 'undefined') return null;
+  const value = window.sessionStorage.getItem(LAST_DATE_KEY);
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function rememberDate(iso: string) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(LAST_DATE_KEY, iso);
+}
 
 export function ExpenseModal({ open, onClose, expense }: Props) {
   const { colors } = useTheme();
@@ -28,11 +48,24 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  /** `id` novo a cada lançamento força a animação a rodar de novo. */
+  const [flash, setFlash] = useState<{ id: number; label: string } | null>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const inlineCalendarRef = useRef<HTMLDivElement>(null);
+
+  // No mobile o calendário abre embaixo: traz ele pra vista sem o usuário rolar.
+  useEffect(() => {
+    if (!showCalendar) return;
+    inlineCalendarRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [showCalendar]);
 
   // Preenche ao abrir (novo ou edição).
   useEffect(() => {
     if (!open) return;
     setShowCalendar(false);
+    setConfirmDelete(false);
     if (expense) {
       setRaw(reaisToRaw(expense.amount));
       setCategoryId(expense.category_id);
@@ -43,7 +76,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       setRaw('');
       setCategoryId(null);
       setSubId(null);
-      setDate(toISODate(new Date()));
+      setDate(readRememberedDate() ?? toISODate(new Date()));
       setNote('');
     }
   }, [open, expense]);
@@ -63,7 +96,8 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   }, []);
   const isQuickDate = quickDates.some((q) => q.value === date);
 
-  async function handleSave() {
+  /** `keepOpen` mantém o modal aberto com data e categoria, para lançar vários seguidos. */
+  async function handleSave({ keepOpen = false } = {}) {
     if (!canSave) return;
     setSaving(true);
     const payload = {
@@ -73,21 +107,50 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       subcategory_id: subId,
       occurred_at: date,
     };
-    if (expense) await updateExpense(expense.id, payload);
-    else await addExpense(payload);
+    if (expense) {
+      await updateExpense(expense.id, payload);
+    } else {
+      await addExpense(payload);
+      rememberDate(date);
+    }
     setSaving(false);
+    if (keepOpen && !expense) {
+      setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
+      setRaw('');
+      setNote('');
+      amountRef.current?.focus();
+      return;
+    }
     onClose();
   }
 
   async function handleDelete() {
     if (!expense) return;
-    if (!confirm('Excluir este gasto?')) return;
+    setDeleting(true);
     await deleteExpense(expense.id);
+    setDeleting(false);
+    setConfirmDelete(false);
     onClose();
   }
 
+  const calendar = (
+    <Calendar
+      selected={fromISODate(date)}
+      onSelect={(d) => {
+        setDate(toISODate(d));
+        setShowCalendar(false);
+      }}
+    />
+  );
+
   return (
-    <Modal open={open} onClose={onClose} title={expense ? 'Editar gasto' : 'Novo gasto'} maxWidth={560}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={expense ? 'Editar gasto' : 'Novo gasto'}
+      maxWidth={560}
+      sidePanel={showCalendar ? calendar : null}
+    >
       {/* Valor */}
       <div className="mb-5 text-center">
         <div
@@ -96,6 +159,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         >
           <span className="text-2xl font-bold" style={{ color: colors.textMuted }}>R$</span>
           <input
+            ref={amountRef}
             autoFocus
             inputMode="numeric"
             value={maskCurrencyInput(raw)}
@@ -198,15 +262,10 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         </button>
       </div>
 
+      {/* Telas estreitas: embaixo mesmo. No desktop vai pro painel lateral do Modal. */}
       {showCalendar && (
-        <div className="mb-4">
-          <Calendar
-            selected={fromISODate(date)}
-            onSelect={(d) => {
-              setDate(toISODate(d));
-              setShowCalendar(false);
-            }}
-          />
+        <div ref={inlineCalendarRef} className="mb-4 lg:hidden">
+          {calendar}
         </div>
       )}
 
@@ -223,22 +282,47 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       <div className="mt-6 flex items-center gap-3">
         {expense && (
           <button
-            onClick={handleDelete}
+            onClick={() => setConfirmDelete(true)}
             className="rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-80"
             style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
           >
             Excluir
           </button>
         )}
+        {!expense && (
+          <button
+            onClick={() => handleSave({ keepOpen: true })}
+            disabled={!canSave || saving}
+            className="ml-auto flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: colors.surface, color: colors.text }}
+            title="Salva e já abre outro com a mesma data e categoria"
+          >
+            <AppIcon icon="plus" size={16} color={colors.primary} />
+            Salvar e lançar outro
+          </button>
+        )}
         <button
-          onClick={handleSave}
+          onClick={() => handleSave()}
           disabled={!canSave || saving}
-          className="ml-auto rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50"
+          className={`${expense ? 'ml-auto' : ''} rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50`}
           style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
         >
           {saving ? 'Salvando…' : expense ? 'Salvar' : 'Adicionar'}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Excluir este gasto?"
+        message="O lançamento some do histórico e dos gráficos. Não dá pra desfazer."
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+
+      {flash && (
+        <SuccessFlash key={flash.id} message={flash.label} onDone={() => setFlash(null)} />
+      )}
     </Modal>
   );
 }

@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTheme } from '../theme/ThemeContext';
+
+/** Modais abertos, do mais antigo ao mais recente: só o do topo responde ao Esc. */
+const openStack: symbol[] = [];
 
 type Props = {
   open: boolean;
@@ -9,28 +12,49 @@ type Props = {
   title?: string;
   children: React.ReactNode;
   maxWidth?: number;
+  /**
+   * Painel exibido ao lado do modal em telas largas (ex.: calendário).
+   * Fica fora do card para não aumentar a altura nem forçar rolagem.
+   */
+  sidePanel?: React.ReactNode;
 };
 
-export function Modal({ open, onClose, title, children, maxWidth = 480 }: Props) {
+export function Modal({ open, onClose, title, children, maxWidth = 480, sidePanel }: Props) {
   const { colors } = useTheme();
+
+  // Ref evita reentrar na pilha a cada render quando onClose é uma arrow inline.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const id = Symbol('modal');
+    openStack.push(id);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (openStack[openStack.length - 1] !== id) return;
+      onCloseRef.current();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      const index = openStack.indexOf(id);
+      if (index !== -1) openStack.splice(index, 1);
+    };
+  }, [open]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="mg-overlay-in fixed inset-0 z-50 flex items-center justify-center gap-4 p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full overflow-y-auto rounded-3xl p-6 shadow-2xl"
+        className="mg-dialog-in max-h-[90vh] w-full overflow-y-auto rounded-3xl p-6 shadow-2xl"
         style={{ backgroundColor: colors.card, maxWidth }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -51,6 +75,15 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: Props)
         )}
         {children}
       </div>
+
+      {sidePanel && (
+        <div
+          className="hidden max-h-[90vh] w-80 shrink-0 overflow-y-auto lg:block"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {sidePanel}
+        </div>
+      )}
     </div>
   );
 }

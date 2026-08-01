@@ -54,9 +54,78 @@ body {
   100% { transform: translateY(0); opacity: 0; }
 }
 
+/* ===== Feedback de ações (modais, confirmações, sucesso) ===== */
+.mg-overlay-in {
+  animation: mg-fade 0.16s ease-out;
+}
+.mg-dialog-in {
+  animation: mg-dialog 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Entra, segura e sai numa animação só; o JS remove no fim. */
+.mg-flash {
+  animation: mg-flash 1.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.mg-pop {
+  animation: mg-pop 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mg-ring {
+  animation: mg-ring 0.6s ease-out forwards;
+}
+.mg-check path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: mg-draw 0.3s 0.1s ease-out forwards;
+}
+
+/* Fatias do gráfico de rosca */
+.mg-slice {
+  transition: stroke-width 0.18s ease, opacity 0.18s ease;
+}
+.mg-slice-hit {
+  cursor: pointer;
+}
+.mg-slice-hit:hover {
+  filter: brightness(1.1);
+}
+
+@keyframes mg-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mg-dialog {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mg-flash {
+  0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+  9% { opacity: 1; transform: none; }
+  86% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+@keyframes mg-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes mg-ring {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes mg-draw {
+  to { stroke-dashoffset: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mascot-breathe, .mascot-gulp, .mascot-eyes-open, .mascot-coin {
     animation: none;
   }
   .mascot-coin { opacity: 0; }
+
+  /* Some o movimento, mantém o conteúdo visível. */
+  .mg-overlay-in, .mg-dialog-in, .mg-flash, .mg-pop, .mg-check path {
+    animation: none;
+  }
+  .mg-slice { transition: none; }
+  .mg-check path { stroke-dashoffset: 0; }
+  .mg-ring { display: none; }
 }
