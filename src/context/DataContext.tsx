@@ -11,7 +11,7 @@ import {
 import { createClient } from '../../lib/supabase/client';
 import { DEFAULT_CATEGORIES } from '../data/defaultCategories';
 import { AppIconName } from '../data/icons';
-import { Budget, Category, CategoryWithSubs, Expense } from '../types';
+import { Budget, Category, CategoryWithSubs, DraftItem, Expense } from '../types';
 import { useAuth } from './AuthContext';
 
 type NewExpense = {
@@ -20,6 +20,16 @@ type NewExpense = {
   category_id: string | null;
   subcategory_id: string | null;
   occurred_at: string;
+};
+
+/** Gasto + subcompras salvos numa transação só (RPC `save_expense_with_items`). */
+type ExpenseWithItemsInput = {
+  expense: NewExpense;
+  items: DraftItem[];
+  /** Notinha anexada, quando houver. */
+  receiptId?: string | null;
+  /** Preenchido quando está editando um gasto que já existe. */
+  expenseId?: string | null;
 };
 
 type CategoryInput = {
@@ -42,6 +52,12 @@ type DataContextValue = {
   hideValue: boolean;
   setHideValue: (value: boolean) => Promise<void>;
   addExpense: (input: NewExpense) => Promise<Expense | null>;
+  /**
+   * Grava o gasto junto das subcompras da notinha. Uma transação só: sem isso,
+   * uma queda de rede no meio deixa item órfão ou gasto sem os itens que o
+   * usuário acabou de revisar.
+   */
+  saveExpenseWithItems: (input: ExpenseWithItemsInput) => Promise<Expense | null>;
   updateExpense: (id: string, input: Partial<NewExpense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   addCategory: (input: CategoryInput) => Promise<Category | null>;
@@ -262,6 +278,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [userId, supabase]
   );
 
+  const saveExpenseWithItems = useCallback(
+    async (input: ExpenseWithItemsInput): Promise<Expense | null> => {
+      if (!userId) return null;
+      const { data, error } = await supabase.rpc('save_expense_with_items', {
+        p_expense: input.expense,
+        p_items: input.items.map((item, index) => ({
+          description: item.description,
+          raw_text: item.raw_text,
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          total: item.total,
+          category_id: item.category_id,
+          position: index,
+        })),
+        p_receipt_id: input.receiptId ?? null,
+        p_expense_id: input.expenseId ?? null,
+      });
+      if (error || !data) return null;
+      const expense = data as Expense;
+      setExpenses((prev) => sortExpenses(upsertById(prev, expense)));
+      return expense;
+    },
+    [userId, supabase]
+  );
+
   const updateExpense = useCallback(
     async (id: string, input: Partial<NewExpense>) => {
       const { data, error } = await supabase
@@ -279,6 +321,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteExpense = useCallback(
     async (id: string) => {
       setExpenses((prev) => prev.filter((e) => e.id !== id));
+
+      // O cascade do banco apaga a linha da notinha, mas não o arquivo no
+      // Storage — esse só sai pela API, e antes de perder a referência a ele.
+      const { data: receipts } = await supabase
+        .from('receipts')
+        .select('storage_path')
+        .eq('expense_id', id);
+      if (receipts?.length) {
+        await supabase.storage
+          .from('receipts')
+          .remove(receipts.map((r) => (r as { storage_path: string }).storage_path));
+      }
+
       await supabase.from('expenses').delete().eq('id', id);
     },
     [supabase]
@@ -380,6 +435,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       getCategory,
       refresh: loadAll,
       addExpense,
+      saveExpenseWithItems,
       updateExpense,
       deleteExpense,
       addCategory,
@@ -400,6 +456,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       getCategory,
       loadAll,
       addExpense,
+      saveExpenseWithItems,
       updateExpense,
       deleteExpense,
       addCategory,

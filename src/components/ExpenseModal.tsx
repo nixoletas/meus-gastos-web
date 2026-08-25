@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { ParseResult } from '../lib/receipts';
+import { useReceipt } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
 import { Expense } from '../types';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
@@ -11,6 +13,7 @@ import { Calendar } from './Calendar';
 import { hexWithAlpha } from './CategoryIcon';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Modal } from './Modal';
+import { ReceiptFields } from './ReceiptFields';
 import { SuccessFlash } from './SuccessFlash';
 
 type Props = {
@@ -39,7 +42,8 @@ function rememberDate(iso: string) {
 
 export function ExpenseModal({ open, onClose, expense }: Props) {
   const { colors } = useTheme();
-  const { categoriesWithSubs, addExpense, updateExpense, deleteExpense } = useData();
+  const { categoriesWithSubs, addExpense, saveExpenseWithItems, updateExpense, deleteExpense } =
+    useData();
 
   const [raw, setRaw] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -52,8 +56,26 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const [deleting, setDeleting] = useState(false);
   /** `id` novo a cada lançamento força a animação a rodar de novo. */
   const [flash, setFlash] = useState<{ id: number; label: string } | null>(null);
+  /** Data escolhida à mão não pode ser trocada pela data lida da notinha. */
+  const [dateTouched, setDateTouched] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
   const inlineCalendarRef = useRef<HTMLDivElement>(null);
+
+  // Notinha: foto, leitura por OCR e as subcompras que saem dela.
+  const receiptState = useReceipt({
+    expenseId: expense?.id ?? null,
+    active: open,
+    onParsed: (result: ParseResult) => {
+      // Só preenche o que está vazio: o que a pessoa digitou vale mais que o OCR.
+      const total = Number(result.receipt.total ?? result.itemsTotal) || 0;
+      if (total > 0) setRaw((current) => (current ? current : reaisToRaw(total)));
+
+      const issued = result.receipt.issued_at ? new Date(result.receipt.issued_at) : null;
+      if (!dateTouched && issued && !Number.isNaN(issued.getTime()) && issued <= new Date()) {
+        setDate(toISODate(issued));
+      }
+    },
+  });
 
   // No mobile o calendário abre embaixo: traz ele pra vista sem o usuário rolar.
   useEffect(() => {
@@ -66,6 +88,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
     if (!open) return;
     setShowCalendar(false);
     setConfirmDelete(false);
+    setDateTouched(false);
     if (expense) {
       setRaw(reaisToRaw(expense.amount));
       setCategoryId(expense.category_id);
@@ -107,10 +130,35 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       subcategory_id: subId,
       occurred_at: date,
     };
+    // Com notinha ou subcompras o gasto vai por RPC: gasto, itens e foto entram
+    // numa transação só. `items_count` cobre o caso de o usuário ter apagado
+    // todos os itens de um gasto que já tinha.
+    const usesItems =
+      receiptState.items.length > 0 ||
+      receiptState.receipt !== null ||
+      (expense?.items_count ?? 0) > 0;
+
     if (expense) {
-      await updateExpense(expense.id, payload);
+      if (usesItems) {
+        await saveExpenseWithItems({
+          expense: payload,
+          items: receiptState.items,
+          receiptId: receiptState.receipt?.id ?? null,
+          expenseId: expense.id,
+        });
+        receiptState.markSaved();
+      } else {
+        await updateExpense(expense.id, payload);
+      }
     } else {
-      await addExpense(payload);
+      const created = usesItems
+        ? await saveExpenseWithItems({
+            expense: payload,
+            items: receiptState.items,
+            receiptId: receiptState.receipt?.id ?? null,
+          })
+        : await addExpense(payload);
+      if (created) receiptState.markSaved();
       rememberDate(date);
     }
     setSaving(false);
@@ -118,6 +166,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
       setRaw('');
       setNote('');
+      receiptState.reset();
       amountRef.current?.focus();
       return;
     }
@@ -138,6 +187,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       selected={fromISODate(date)}
       onSelect={(d) => {
         setDate(toISODate(d));
+        setDateTouched(true);
         setShowCalendar(false);
       }}
     />
@@ -236,6 +286,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
               type="button"
               onClick={() => {
                 setDate(q.value);
+                setDateTouched(true);
                 setShowCalendar(false);
               }}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
@@ -277,6 +328,23 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         placeholder="ex.: almoço com a equipe"
         className="mb-4 w-full rounded-xl border px-3 py-2.5 text-sm outline-none"
         style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
+      />
+
+      {/* Notinha + subcompras. Os itens detalham o gasto; o total do mês
+          continua sendo só o valor do lançamento. */}
+      <ReceiptFields
+        receipt={receiptState.receipt}
+        items={receiptState.items}
+        phase={receiptState.phase}
+        error={receiptState.error}
+        mismatch={receiptState.mismatch}
+        photoUrl={receiptState.photoUrl}
+        expenseAmount={amount}
+        onAttach={receiptState.attach}
+        onRetry={receiptState.retry}
+        onRemove={receiptState.remove}
+        onChangeItems={receiptState.setItems}
+        onUseItemsTotal={(value) => setRaw(reaisToRaw(value))}
       />
 
       <div className="mt-6 flex items-center gap-3">

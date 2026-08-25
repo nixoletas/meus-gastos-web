@@ -270,8 +270,21 @@ export default function DashboardPage() {
                         <div className="truncate font-semibold" style={{ color: colors.text }}>
                           {cat?.name ?? 'Sem categoria'}
                         </div>
-                        {e.note && (
-                          <div className="truncate text-sm" style={{ color: colors.textMuted }}>{e.note}</div>
+                        {(e.note || e.items_count > 0 || e.has_receipt) && (
+                          <div className="flex items-center gap-2 text-sm" style={{ color: colors.textMuted }}>
+                            {e.note && <span className="truncate">{e.note}</span>}
+                            {/* Gasto com notinha mostra o que tem dentro sem precisar abrir. */}
+                            {(e.items_count > 0 || e.has_receipt) && (
+                              <span
+                                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"
+                                style={{ backgroundColor: colors.surface }}
+                              >
+                                {e.items_count > 0
+                                  ? `${e.items_count} ${e.items_count === 1 ? 'item' : 'itens'}`
+                                  : 'notinha'}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="font-bold" style={{ color: colors.text }}>{formatBRL(e.amount)}</div>
