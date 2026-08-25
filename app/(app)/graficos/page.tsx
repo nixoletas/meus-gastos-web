@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { CategoryIcon } from '../../../src/components/CategoryIcon';
 import { DonutChart } from '../../../src/components/DonutChart';
+import { ExpenseItems } from '../../../src/components/ExpenseItems';
 import { PeriodSwitcher } from '../../../src/components/PeriodSwitcher';
 import { useData } from '../../../src/context/DataContext';
 import { useTheme } from '../../../src/theme/ThemeContext';
@@ -24,6 +25,8 @@ export default function GraficosPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
   const legendRefs = useRef(new Map<string, HTMLButtonElement>());
+  /** Gasto aberto mostrando as subcompras da notinha. */
+  const [openExpense, setOpenExpense] = useState<string | null>(null);
 
   function toggleSub(key: string) {
     setExpandedSubs((prev) => {
@@ -196,20 +199,40 @@ export default function GraficosPage() {
                   </button>
                   {open && (
                     <div className="space-y-1 px-3 pb-3" style={{ borderTop: `1px solid ${colors.border}` }}>
-                      {items.map((e) => (
-                        <div key={e.id} className="flex items-center gap-3 pt-2">
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: parentColor }} />
-                          <div className="min-w-0 flex-1 truncate text-sm" style={{ color: colors.text }}>
-                            {e.note?.trim() || (b.sub?.name ?? 'Sem subcategoria')}
+                      {items.map((e) => {
+                        const comItens = e.items_count > 0;
+                        const itensAbertos = openExpense === e.id;
+                        return (
+                          <div key={e.id}>
+                            {/* Gasto com notinha vira mais um nível da árvore:
+                                categoria > subcategoria > gasto > itens. */}
+                            <button
+                              type="button"
+                              disabled={!comItens}
+                              onClick={() => setOpenExpense(itensAbertos ? null : e.id)}
+                              className="flex w-full items-center gap-3 pt-2 text-left disabled:cursor-default"
+                            >
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: parentColor }} />
+                              <div className="min-w-0 flex-1 truncate text-sm" style={{ color: colors.text }}>
+                                {e.note?.trim() || (b.sub?.name ?? 'Sem subcategoria')}
+                              </div>
+                              <div className="shrink-0 text-xs" style={{ color: colors.textMuted }}>
+                                {relativeDayLabel(e.occurred_at)}
+                              </div>
+                              <div className="shrink-0 text-sm font-semibold" style={{ color: colors.text }}>
+                                {formatBRL(e.amount)}
+                              </div>
+                              {comItens && (
+                                <span className="shrink-0 text-xs font-bold" style={{ color: colors.textMuted }}>
+                                  {e.items_count} {itensAbertos ? '▴' : '▾'}
+                                </span>
+                              )}
+                            </button>
+
+                            {itensAbertos && <ExpenseItems expenseId={e.id} color={parentColor} />}
                           </div>
-                          <div className="shrink-0 text-xs" style={{ color: colors.textMuted }}>
-                            {relativeDayLabel(e.occurred_at)}
-                          </div>
-                          <div className="shrink-0 text-sm font-semibold" style={{ color: colors.text }}>
-                            {formatBRL(e.amount)}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

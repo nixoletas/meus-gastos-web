@@ -338,9 +338,11 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         phase={receiptState.phase}
         error={receiptState.error}
         mismatch={receiptState.mismatch}
+        duplicate={receiptState.duplicate}
         photoUrl={receiptState.photoUrl}
         expenseAmount={amount}
         onAttach={receiptState.attach}
+        onAttachQr={receiptState.attachQr}
         onRetry={receiptState.retry}
         onRemove={receiptState.remove}
         onChangeItems={receiptState.setItems}

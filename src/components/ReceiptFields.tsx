@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { newDraftItem, sumItems } from '../lib/receipts';
 import { ReceiptPhase } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
@@ -16,10 +16,13 @@ type Props = {
   error: string | null;
   /** A soma dos itens não bate com o total impresso na nota. */
   mismatch: boolean;
+  /** Id do gasto que já usou esta mesma nota fiscal. */
+  duplicate: string | null;
   photoUrl: string | null;
   /** Valor digitado no lançamento, para comparar com a soma dos itens. */
   expenseAmount: number;
   onAttach: (file: File) => void;
+  onAttachQr: (qrUrl: string) => void;
   onRetry: () => void;
   onRemove: () => void;
   onChangeItems: (items: DraftItem[]) => void;
@@ -57,9 +60,11 @@ export function ReceiptFields({
   phase,
   error,
   mismatch,
+  duplicate,
   photoUrl,
   expenseAmount,
   onAttach,
+  onAttachQr,
   onRetry,
   onRemove,
   onChangeItems,
@@ -67,6 +72,8 @@ export function ReceiptFields({
 }: Props) {
   const { colors } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [qrLink, setQrLink] = useState('');
 
   const total = sumItems(items);
   const busy = phase === 'uploading' || phase === 'reading';
@@ -81,6 +88,29 @@ export function ReceiptFields({
 
   function update(key: string, patch: Partial<DraftItem>) {
     onChangeItems(items.map((item) => (item.key === key ? { ...item, ...patch } : item)));
+  }
+
+  /** Aceita o arquivo arrastado, seja da área de trabalho ou de outra aba. */
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    if (busy) return;
+
+    const file = [...event.dataTransfer.files].find((f) => f.type.startsWith('image/'));
+    if (file) {
+      onAttach(file);
+      return;
+    }
+    // Arrastar o link do QR (de um e-mail, de outra aba) também vale.
+    const texto = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text');
+    if (texto && /^https:\/\//i.test(texto.trim())) onAttachQr(texto.trim());
+  }
+
+  function enviarLink() {
+    const valor = qrLink.trim();
+    if (!/^https:\/\//i.test(valor)) return;
+    setQrLink('');
+    onAttachQr(valor);
   }
 
   return (
@@ -111,21 +141,64 @@ export function ReceiptFields({
       />
 
       {!receipt && !busy && (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-bold transition hover:opacity-80"
-          style={{ borderColor: colors.border, color: colors.primary }}
-        >
-          <AppIcon icon="camera" size={18} color={colors.primary} />
-          Anexar foto da nota
-        </button>
-      )}
+        <>
+          {/* Arrastar o cupom é o gesto natural de quem já tem a foto no
+              computador; o clique continua funcionando para todo o resto. */}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className="flex w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed py-6 text-sm font-bold transition hover:opacity-80"
+            style={{
+              borderColor: dragging ? colors.primary : colors.border,
+              backgroundColor: dragging ? colors.primarySoft : 'transparent',
+              color: colors.primary,
+            }}
+          >
+            <AppIcon icon="camera" size={20} color={colors.primary} />
+            {dragging ? 'Solte a foto aqui' : 'Arraste a foto da nota ou clique para escolher'}
+          </button>
 
-      {!receipt && !busy && (
-        <div className="mt-1.5 text-xs" style={{ color: colors.textMuted }}>
-          Eu separo cada item da compra sozinho. A foto é enviada ao Google para a leitura.
-        </div>
+          {/* Caminho exato: o link do QR não passa por leitura de imagem. */}
+          <div className="mt-2 flex gap-2">
+            <input
+              value={qrLink}
+              onChange={(e) => setQrLink(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  enviarLink();
+                }
+              }}
+              placeholder="ou cole aqui o link do QR Code do cupom"
+              className="min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              }}
+            />
+            <button
+              type="button"
+              onClick={enviarLink}
+              disabled={!/^https:\/\//i.test(qrLink.trim())}
+              className="rounded-xl px-4 py-2 text-sm font-bold transition hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+            >
+              Ler nota
+            </button>
+          </div>
+
+          <div className="mt-1.5 text-xs" style={{ color: colors.textMuted }}>
+            Com o link do QR, os itens vêm direto da SEFAZ, sem enviar imagem. Na
+            foto, quem lê é o Google — e ela funciona em qualquer recibo.
+          </div>
+        </>
       )}
 
       {busy && (
@@ -134,7 +207,11 @@ export function ReceiptFields({
           style={{ backgroundColor: colors.card, borderColor: colors.border }}
         >
           <div className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
-            {phase === 'uploading' ? 'Enviando a foto…' : 'Lendo sua notinha…'}
+            {phase === 'uploading'
+              ? 'Enviando a foto…'
+              : receipt?.source === 'qrcode'
+                ? 'Consultando a nota na SEFAZ…'
+                : 'Lendo sua notinha…'}
           </div>
           <div className="space-y-2">
             {['82%', '64%', '73%'].map((width) => (
@@ -193,11 +270,17 @@ export function ReceiptFields({
                 />
               </a>
             ) : (
-              <div className="h-16 w-12 rounded-lg" style={{ backgroundColor: colors.surface }} />
+              <div
+                className="flex h-16 w-12 items-center justify-center rounded-lg text-xl"
+                style={{ backgroundColor: colors.surface, color: colors.textMuted }}
+                title={receipt.source === 'qrcode' ? 'Notinha lida pelo QR Code' : 'Sem foto'}
+              >
+                {receipt.source === 'qrcode' ? '▦' : '🧾'}
+              </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="truncate font-bold" style={{ color: colors.text }}>
-                {receipt.merchant ?? 'Notinha anexada'}
+                {receipt.merchant ?? (receipt.source === 'qrcode' ? 'Nota fiscal' : 'Notinha anexada')}
               </div>
               {meta.length > 0 && (
                 <div className="truncate text-xs" style={{ color: colors.textMuted }}>
@@ -215,6 +298,15 @@ export function ReceiptFields({
               Remover
             </button>
           </div>
+
+          {!!duplicate && (
+            <div
+              className="mt-3 rounded-lg p-2 text-xs"
+              style={{ backgroundColor: hexWithAlpha(colors.warning, 0.14), color: colors.text }}
+            >
+              Essa nota fiscal já foi lançada antes. Se não for engano, pode continuar.
+            </div>
+          )}
 
           {mismatch && (
             <div

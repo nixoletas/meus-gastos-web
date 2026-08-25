@@ -13,12 +13,15 @@ import { createClient } from '../../lib/supabase/client';
 import { useAuth } from '../context/AuthContext';
 import { DraftItem, Receipt } from '../types';
 import {
+  createQrReceipt,
   discardReceipt,
   loadItemsOfExpense,
   loadReceiptOfExpense,
+  parseNfce,
   ParseResult,
   parseReceipt,
   prepareImage,
+  qrFromImage,
   receiptSignedUrl,
   toDraftItems,
   uploadReceipt,
@@ -44,6 +47,8 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
   const [phase, setPhase] = useState<ReceiptPhase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [mismatch, setMismatch] = useState(false);
+  /** Id do gasto que já usou esta mesma nota fiscal. */
+  const [duplicate, setDuplicate] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   /** Notinha criada nesta sessão e ainda não salva — some se o modal fechar. */
@@ -59,6 +64,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
     setPhase('idle');
     setError(null);
     setMismatch(false);
+    setDuplicate(null);
   }, []);
 
   // Abriu para editar um gasto: traz a notinha e os itens já salvos.
@@ -79,8 +85,11 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setReceipt(saved);
         setPhase(saved.status === 'failed' ? 'failed' : 'ready');
         setError(saved.error);
-        const url = await receiptSignedUrl(supabase, saved.storage_path);
-        if (alive) setPhotoUrl(url);
+        // Notinha vinda de QR Code não tem foto para exibir.
+        if (saved.storage_path) {
+          const url = await receiptSignedUrl(supabase, saved.storage_path);
+          if (alive) setPhotoUrl(url);
+        }
       }
       if (savedItems.length > 0) setItems(toDraftItems(savedItems));
     })();
@@ -104,15 +113,49 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
     async (target: Receipt) => {
       setPhase('reading');
       setError(null);
-      const result = await parseReceipt(supabase, target.id);
+      // Cada origem tem seu leitor: QR consulta a SEFAZ, foto vai para o modelo.
+      const result =
+        target.source === 'qrcode'
+          ? await parseNfce(supabase, target.id)
+          : await parseReceipt(supabase, target.id);
       setReceipt(result.receipt);
       pendingRef.current = result.receipt;
       setItems(toDraftItems(result.items));
       setMismatch(result.mismatch);
+      setDuplicate(result.duplicate ?? null);
       setPhase('ready');
       onParsedRef.current?.(result);
     },
     [supabase]
+  );
+
+  /**
+   * QR Code do cupom: os itens vêm do portal da SEFAZ, exatos e de graça.
+   * Na web o valor chega colado pelo usuário ou lido de dentro da imagem.
+   */
+  const attachQr = useCallback(
+    async (qrUrl: string) => {
+      if (!user) return;
+      try {
+        setError(null);
+        const previous = receipt;
+        setPhase('reading');
+        setMismatch(false);
+        setDuplicate(null);
+        setPhotoUrl(null);
+
+        const created = await createQrReceipt(supabase, user.id, qrUrl);
+        pendingRef.current = created;
+        setReceipt(created);
+        if (previous) void discardReceipt(supabase, previous);
+
+        await runParse(created);
+      } catch (err) {
+        setPhase('failed');
+        setError(err instanceof Error ? err.message : 'Não consegui ler esse QR Code.');
+      }
+    },
+    [user, supabase, receipt, runParse]
   );
 
   const attach = useCallback(
@@ -122,6 +165,15 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setError(null);
         setPhase('uploading');
         setMismatch(false);
+        setDuplicate(null);
+
+        // Foto do cupom com QR legível: a consulta na SEFAZ é exata e não
+        // manda imagem nenhuma para fora. Só cai no OCR quando não dá.
+        const scanned = await qrFromImage(file);
+        if (scanned) {
+          await attachQr(scanned);
+          return;
+        }
 
         const blob = await prepareImage(file);
         setPhotoUrl(URL.createObjectURL(blob)); // prévia local, sem esperar URL assinada
@@ -139,7 +191,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setError(err instanceof Error ? err.message : 'Não consegui ler a notinha.');
       }
     },
-    [user, supabase, receipt, runParse]
+    [user, supabase, receipt, runParse, attachQr]
   );
 
   const retry = useCallback(async () => {
@@ -170,8 +222,10 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
     phase,
     error,
     mismatch,
+    duplicate,
     photoUrl,
     attach,
+    attachQr,
     retry,
     remove,
     markSaved,
