@@ -1,4 +1,5 @@
 import { BRAND_ICONS } from '../data/brandIcons';
+import { emojiChar, isEmojiIcon } from '../data/emojis';
 import { FALLBACK_ICON, ICON_PATHS } from '../data/iconPaths';
 
 type Props = {
@@ -17,8 +18,28 @@ function resolvePath(icon: string): string {
   return ICON_PATHS[icon] ?? FALLBACK_ICON;
 }
 
-/** Renderiza um ícone (MDI ou marca) como SVG 24x24. */
+/** Renderiza um ícone (emoji, marca ou MDI) no tamanho pedido. */
 export function AppIcon({ icon, size = 24, color = 'currentColor', className }: Props) {
+  // Emoji tem cor própria; `color` não se aplica.
+  if (isEmojiIcon(icon)) {
+    return (
+      <span
+        className={className}
+        style={{
+          fontSize: size * 0.86,
+          lineHeight: `${size}px`,
+          width: size,
+          height: size,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {emojiChar(icon)}
+      </span>
+    );
+  }
+
   const path = resolvePath(icon);
   return (
     <svg
