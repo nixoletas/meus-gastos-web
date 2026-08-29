@@ -28,6 +28,32 @@ const CATALOG = [
   'printer', 'dots-horizontal', 'tag', 'star', 'shield-check', 'umbrella',
 ];
 
+// Ampliação do catálogo: genéricos do dia a dia, nuvem/SaaS e logos de marca
+// que existem como glyph do MDI (os demais vêm do simple-icons em brandIcons.ts).
+const CATALOG_EXTRA = [
+  'aws', 'microsoft-azure', 'google-cloud', 'digital-ocean', 'firebase', 'github', 'gitlab',
+  'bitbucket', 'docker', 'npm', 'jira', 'atlassian', 'slack', 'salesforce', 'hubspot',
+  'trello', 'evernote', 'onepassword', 'google-drive', 'gmail', 'box', 'wordpress',
+  'soundcloud', 'steam', 'nintendo-switch', 'linkedin', 'patreon', 'fish', 'egg', 'cheese',
+  'fruit-cherries', 'carrot', 'rice', 'bottle-wine', 'glass-cocktail', 'silverware-spoon',
+  'silverware-variant', 'scooter', 'ferry', 'train-car', 'fuel', 'oil', 'car-battery',
+  'engine', 'sail-boat', 'washing-machine', 'fridge', 'stove', 'air-conditioner',
+  'solar-power', 'lightning-bolt', 'candle', 'flower', 'tree', 'wallet', 'cash-fast',
+  'cash-lock', 'bank-transfer', 'currency-brl', 'currency-usd', 'calculator', 'hand-coin',
+  'safe-square', 'piggy-bank-outline', 'receipt-text', 'sale', 'chart-bar', 'chart-pie',
+  'chart-areaspline', 'scale', 'gavel', 'tag-multiple', 'cart-variant', 'truck-delivery',
+  'package-variant', 'warehouse', 'store', 'storefront', 'needle', 'bandage', 'stethoscope',
+  'wheelchair', 'eye-outline', 'ear-hearing', 'brain', 'yoga', 'theater', 'music-note',
+  'microphone', 'podcast', 'book', 'newspaper', 'radio', 'television', 'filmstrip',
+  'cards-playing', 'soccer', 'basketball', 'tennis', 'swim', 'ski', 'hiking', 'tent', 'server',
+  'server-network', 'database', 'cloud-upload', 'cloud-download', 'api', 'code-braces', 'web',
+  'domain', 'monitor', 'tablet', 'harddisk', 'memory', 'cpu-64-bit', 'robot', 'key-variant',
+  'shield-lock', 'vpn', 'email', 'at', 'cellphone-charging', 'lightbulb-on', 'baby',
+  'human-cane', 'school-outline', 'bird', 'rabbit', 'horse', 'account-group', 'handshake',
+  'charity', 'church', 'briefcase-account', 'calendar-check', 'calendar-clock',
+  'clock-outline', 'timer-outline', 'passport', 'shield-account',
+];
+
 // Ícones das categorias padrão (defaultCategories.ts) que não estão no catálogo.
 const DEFAULTS = ['star-circle', 'package-variant-closed', 'microsoft', 'microsoft-xbox', 'shape'];
 
@@ -43,7 +69,7 @@ const UI = [
   'translate', 'alphabetical-variant',
 ];
 
-const names = [...new Set([...CATALOG, ...DEFAULTS, ...UI])].sort();
+const names = [...new Set([...CATALOG, ...CATALOG_EXTRA, ...DEFAULTS, ...UI])].sort();
 
 function toMdiKey(name) {
   const pascal = name
