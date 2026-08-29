@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './AppIcon';
 import { hexWithAlpha } from './CategoryIcon';
@@ -27,9 +28,9 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Excluir',
-  cancelLabel = 'Cancelar',
-  busyLabel = 'Excluindo…',
+  confirmLabel,
+  cancelLabel,
+  busyLabel,
   tone = 'danger',
   icon = 'trash-can-outline',
   busy = false,
@@ -37,6 +38,10 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const { colors } = useTheme();
+  const t = useT();
+  const confirmText = confirmLabel ?? t.confirm.defaultConfirm;
+  const cancelText = cancelLabel ?? t.confirm.defaultCancel;
+  const busyText = busyLabel ?? t.web.deletingShort;
   const accent = tone === 'danger' ? colors.danger : colors.primary;
   const accentSoft = tone === 'danger' ? colors.dangerSoft : colors.primarySoft;
 
@@ -71,7 +76,7 @@ export function ConfirmDialog({
             className="flex-1 rounded-xl px-4 py-3 font-bold transition hover:opacity-80 disabled:opacity-50"
             style={{ backgroundColor: colors.surface, color: colors.text }}
           >
-            {cancelLabel}
+            {cancelText}
           </button>
           <button
             type="button"
@@ -81,7 +86,7 @@ export function ConfirmDialog({
             className="flex-1 rounded-xl px-4 py-3 font-bold transition hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: accent, color: '#FFFFFF' }}
           >
-            {busy ? busyLabel : confirmLabel}
+            {busy ? busyText : confirmText}
           </button>
         </div>
       </div>

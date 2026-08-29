@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useT } from '../i18n';
 import { ParseResult } from '../lib/receipts';
 import { useReceipt } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
@@ -42,6 +43,7 @@ function rememberDate(iso: string) {
 
 export function ExpenseModal({ open, onClose, expense }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const { categoriesWithSubs, addExpense, saveExpenseWithItems, updateExpense, deleteExpense } =
     useData();
 
@@ -113,10 +115,10 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
     return [
-      { label: 'Hoje', value: toISODate(today) },
-      { label: 'Ontem', value: toISODate(yesterday) },
+      { label: t.expense.today, value: toISODate(today) },
+      { label: t.expense.yesterday, value: toISODate(yesterday) },
     ];
-  }, []);
+  }, [t]);
   const isQuickDate = quickDates.some((q) => q.value === date);
 
   /** `keepOpen` mantém o modal aberto com data e categoria, para lançar vários seguidos. */
@@ -163,7 +165,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
     }
     setSaving(false);
     if (keepOpen && !expense) {
-      setFlash({ id: Date.now(), label: `${formatBRL(amount)} lançado` });
+      setFlash({ id: Date.now(), label: t.expense.flashSaved(formatBRL(amount)) });
       setRaw('');
       setNote('');
       receiptState.reset();
@@ -197,7 +199,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title={expense ? 'Editar gasto' : 'Novo gasto'}
+      title={expense ? t.expense.editTitle : t.expense.newTitle}
       maxWidth={560}
       sidePanel={showCalendar ? calendar : null}
     >
@@ -221,7 +223,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       </div>
 
       {/* Categoria */}
-      <Label>Categoria</Label>
+      <Label>{t.expense.category}</Label>
       <div className="mb-4 flex flex-wrap gap-2">
         {categoriesWithSubs.map((cat) => {
           const active = cat.id === categoryId;
@@ -250,7 +252,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       {/* Subcategoria */}
       {selectedParent && selectedParent.subcategories.length > 0 && (
         <>
-          <Label>Subcategoria (opcional)</Label>
+          <Label>{t.web.subcategoryOptional}</Label>
           <div className="mb-4 flex flex-wrap gap-2">
             {selectedParent.subcategories.map((sub) => {
               const active = sub.id === subId;
@@ -276,7 +278,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       )}
 
       {/* Data */}
-      <Label>Quando</Label>
+      <Label>{t.expense.when}</Label>
       <div className="mb-3 flex flex-wrap gap-2">
         {quickDates.map((q) => {
           const active = q.value === date;
@@ -309,7 +311,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
           }}
         >
           <AppIcon icon="calendar-month" size={16} color={colors.primary} />
-          {isQuickDate ? 'Outra data' : relativeDayLabel(date)}
+          {isQuickDate ? t.expense.otherDate : relativeDayLabel(date)}
         </button>
       </div>
 
@@ -321,11 +323,11 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       )}
 
       {/* Nota */}
-      <Label>Nota (opcional)</Label>
+      <Label>{t.web.noteOptional}</Label>
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="ex.: almoço com a equipe"
+        placeholder={t.web.notePlaceholder}
         className="mb-4 w-full rounded-xl border px-3 py-2.5 text-sm outline-none"
         style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
       />
@@ -356,7 +358,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
             className="rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-80"
             style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
           >
-            Excluir
+            {t.common.delete}
           </button>
         )}
         {!expense && (
@@ -365,10 +367,10 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
             disabled={!canSave || saving}
             className="ml-auto flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: colors.surface, color: colors.text }}
-            title="Salva e já abre outro com a mesma data e categoria"
+            title={t.web.saveAndNewTitle}
           >
             <AppIcon icon="plus" size={16} color={colors.primary} />
-            Salvar e lançar outro
+            {t.expense.saveAndNew}
           </button>
         )}
         <button
@@ -377,14 +379,14 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
           className={`${expense ? 'ml-auto' : ''} rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50`}
           style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
         >
-          {saving ? 'Salvando…' : expense ? 'Salvar' : 'Adicionar'}
+          {saving ? t.web.saving : expense ? t.common.save : t.web.add}
         </button>
       </div>
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Excluir este gasto?"
-        message="O lançamento some do histórico e dos gráficos. Não dá pra desfazer."
+        title={t.expense.deleteTitle}
+        message={t.expense.deleteMessage}
         busy={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}

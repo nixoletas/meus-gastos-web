@@ -9,18 +9,21 @@ import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseModal } from '../../src/components/ExpenseModal';
 import { PiggyMark } from '../../src/components/Mascot';
 import { useAuth } from '../../src/context/AuthContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 
+/** Rotas fixas; o rótulo vem do dicionário na hora de renderizar. */
 const NAV = [
-  { href: '/', label: 'Início', icon: 'home' },
-  { href: '/categorias', label: 'Categorias', icon: 'shape' },
-  { href: '/limites', label: 'Limites', icon: 'target' },
-  { href: '/graficos', label: 'Gráficos', icon: 'chart-donut' },
-  { href: '/ajustes', label: 'Ajustes', icon: 'cog' },
-];
+  { href: '/', labelKey: 'home', icon: 'home' },
+  { href: '/categorias', labelKey: 'categories', icon: 'shape' },
+  { href: '/limites', labelKey: 'limits', icon: 'target' },
+  { href: '/graficos', labelKey: 'charts', icon: 'chart-donut' },
+  { href: '/ajustes', labelKey: 'settings', icon: 'cog' },
+] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
+  const t = useT();
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
@@ -67,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold transition hover:opacity-90"
           style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
         >
-          <AppIcon icon="plus" size={20} color={colors.onPrimary} /> Novo gasto
+          <AppIcon icon="plus" size={20} color={colors.onPrimary} /> {t.web.newExpense}
         </button>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -85,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <AppIcon icon={item.icon} size={20} color={active ? colors.primary : colors.textMuted} />
-                {item.label}
+                {t.tabs[item.labelKey]}
               </Link>
             );
           })}
@@ -124,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="rounded-lg px-3 py-1.5 text-sm font-bold"
             style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
           >
-            + Novo
+            {t.web.newShort}
           </button>
         </div>
 
@@ -146,7 +149,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <AppIcon icon={item.icon} size={22} color={active ? colors.primary : colors.textMuted} />
                 <span className="text-[10px] font-semibold" style={{ color: active ? colors.primary : colors.textMuted }}>
-                  {item.label}
+                  {t.tabs[item.labelKey]}
                 </span>
               </Link>
             );

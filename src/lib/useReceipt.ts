@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import { useAuth } from '../context/AuthContext';
+import { tNow } from '../i18n';
 import { DraftItem, Receipt } from '../types';
 import {
   createQrReceipt,
@@ -152,7 +153,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         await runParse(created);
       } catch (err) {
         setPhase('failed');
-        setError(err instanceof Error ? err.message : 'Não consegui ler esse QR Code.');
+        setError(err instanceof Error ? err.message : tNow().errors.readQr);
       }
     },
     [user, supabase, receipt, runParse]
@@ -188,7 +189,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         await runParse(created);
       } catch (err) {
         setPhase('failed');
-        setError(err instanceof Error ? err.message : 'Não consegui ler a notinha.');
+        setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
       }
     },
     [user, supabase, receipt, runParse, attachQr]
@@ -200,7 +201,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
       await runParse(receipt);
     } catch (err) {
       setPhase('failed');
-      setError(err instanceof Error ? err.message : 'Não consegui ler a notinha.');
+      setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
     }
   }, [receipt, runParse]);
 

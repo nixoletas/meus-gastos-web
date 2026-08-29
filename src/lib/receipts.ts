@@ -8,6 +8,8 @@
  * (que no celular já abre a câmera com `capture`).
  */
 import { SupabaseClient } from '@supabase/supabase-js';
+import { tNow } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { DraftItem, ExpenseItem, Receipt } from '../types';
 
 /**
@@ -68,14 +70,14 @@ export async function prepareImage(file: File): Promise<Blob> {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Não consegui preparar a foto neste navegador.');
+  if (!ctx) throw new Error(tNow().errors.photoPrepareBrowser);
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY)
   );
-  if (!blob) throw new Error('Não consegui preparar a foto. Tente outra.');
+  if (!blob) throw new Error(tNow().errors.photoPrepare);
   return blob;
 }
 
@@ -103,7 +105,7 @@ export async function uploadReceipt(
   if (error || !data) {
     // Não deixa lixo no bucket se o insert falhou.
     await supabase.storage.from('receipts').remove([path]);
-    throw new Error(error?.message ?? 'Não consegui registrar a notinha.');
+    throw new Error(error?.message ?? tNow().errors.registerReceipt);
   }
   return data as Receipt;
 }
@@ -127,7 +129,7 @@ export async function createQrReceipt(
     .select()
     .single();
 
-  if (error || !data) throw new Error(error?.message ?? 'Não consegui registrar a notinha.');
+  if (error || !data) throw new Error(error?.message ?? tNow().errors.registerReceipt);
   return data as Receipt;
 }
 
@@ -146,7 +148,8 @@ async function invokeParser(
   receiptId: string
 ): Promise<ParseResult> {
   const { data, error } = await supabase.functions.invoke<ParseResult>(fn, {
-    body: { receipt_id: receiptId },
+    // `lang`: a função devolve mensagens de erro prontas para o usuário ler.
+    body: { receipt_id: receiptId, lang: getActiveLang() },
   });
 
   if (error) {
@@ -162,9 +165,9 @@ async function invokeParser(
     } catch {
       /* fica com a mensagem genérica */
     }
-    throw new Error(message ?? 'Não consegui ler a notinha.');
+    throw new Error(message ?? tNow().errors.readReceipt);
   }
-  if (!data) throw new Error('Não consegui ler a notinha.');
+  if (!data) throw new Error(tNow().errors.readReceipt);
   return data;
 }
 

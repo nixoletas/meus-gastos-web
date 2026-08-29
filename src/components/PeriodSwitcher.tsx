@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '../i18n';
 import { Period, periodLabel, shiftPeriod } from '../utils/date';
 import { useTheme } from '../theme/ThemeContext';
 import { hexWithAlpha } from './CategoryIcon';
@@ -13,6 +14,7 @@ type Props = {
 
 export function PeriodSwitcher({ date, period, onChangeDate, onChangePeriod }: Props) {
   const { colors } = useTheme();
+  const t = useT();
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -24,7 +26,7 @@ export function PeriodSwitcher({ date, period, onChangeDate, onChangePeriod }: P
           onClick={() => onChangeDate(shiftPeriod(date, period, -1))}
           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold transition hover:opacity-70"
           style={{ color: colors.text }}
-          aria-label="Anterior"
+          aria-label={t.web.previous}
         >
           ‹
         </button>
@@ -38,7 +40,7 @@ export function PeriodSwitcher({ date, period, onChangeDate, onChangePeriod }: P
           onClick={() => onChangeDate(shiftPeriod(date, period, 1))}
           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold transition hover:opacity-70"
           style={{ color: colors.text }}
-          aria-label="Próximo"
+          aria-label={t.web.next}
         >
           ›
         </button>
@@ -60,7 +62,7 @@ export function PeriodSwitcher({ date, period, onChangeDate, onChangePeriod }: P
                 color: active ? colors.primary : colors.textMuted,
               }}
             >
-              {p === 'month' ? 'Mês' : 'Ano'}
+              {p === 'month' ? t.common.month : t.common.year}
             </button>
           );
         })}

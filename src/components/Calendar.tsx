@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
-import { monthName, toISODate } from '../utils/date';
+import { monthName, toISODate, weekdayInitials } from '../utils/date';
 import { AppIcon } from './AppIcon';
 
 type Props = {
@@ -12,11 +13,10 @@ type Props = {
   onSelect: (date: Date) => void;
 };
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
 /** Calendário mensal próprio (mesmo visual do app mobile), com navegação de mês. */
 export function Calendar({ selected, maxDate, onSelect }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [view, setView] = useState(() => new Date(selected));
 
   // Mantém o mês exibido em sincronia quando a data selecionada muda por fora.
@@ -54,7 +54,7 @@ export function Calendar({ selected, maxDate, onSelect }: Props) {
           onClick={() => shiftMonth(-1)}
           className="flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-80"
           style={{ backgroundColor: colors.surface }}
-          aria-label="Mês anterior"
+          aria-label={t.web.previousMonth}
         >
           <AppIcon icon="chevron-left" size={20} color={colors.text} />
         </button>
@@ -66,14 +66,14 @@ export function Calendar({ selected, maxDate, onSelect }: Props) {
           onClick={() => shiftMonth(1)}
           className="flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-80"
           style={{ backgroundColor: colors.surface }}
-          aria-label="Próximo mês"
+          aria-label={t.web.nextMonth}
         >
           <AppIcon icon="chevron-right" size={20} color={colors.text} />
         </button>
       </div>
 
       <div className="mb-1 flex">
-        {WEEKDAYS.map((w, i) => (
+        {weekdayInitials().map((w, i) => (
           <span
             key={i}
             className="flex-1 text-center text-xs font-semibold"
@@ -126,7 +126,7 @@ export function Calendar({ selected, maxDate, onSelect }: Props) {
         style={{ backgroundColor: colors.surface, color: colors.primary }}
       >
         <AppIcon icon="calendar-today" size={16} color={colors.primary} />
-        Hoje
+        {t.calendar.today}
       </button>
     </div>
   );

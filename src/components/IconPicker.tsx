@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { searchIcons } from '../data/icons';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './AppIcon';
 import { hexWithAlpha } from './CategoryIcon';
@@ -14,6 +15,7 @@ type Props = {
 
 export function IconPicker({ value, color, onChange }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const [query, setQuery] = useState('');
   const results = useMemo(() => searchIcons(query).slice(0, 60), [query]);
 
@@ -22,7 +24,7 @@ export function IconPicker({ value, color, onChange }: Props) {
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar ícone (ex.: comida, carro, netflix)"
+        placeholder={t.web.iconSearchPlaceholder}
         className="mb-3 w-full rounded-xl border px-3 py-2 text-sm outline-none"
         style={{
           backgroundColor: colors.surface,

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { useI18n } from '../i18n';
+import { monthName } from '../utils/date';
 import { useTheme } from '../theme/ThemeContext';
 import { hexWithAlpha } from './CategoryIcon';
 import { AppIcon } from './AppIcon';
@@ -24,13 +26,9 @@ type ReportResult = {
   error?: string;
 };
 
-const MESES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
 export function ReportExportModal({ open, onClose, userEmail }: Props) {
   const { colors } = useTheme();
+  const { t, lang } = useI18n();
   const now = new Date();
   const [kind, setKind] = useState<Kind>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -38,7 +36,12 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
   const [busy, setBusy] = useState<null | 'email' | 'download'>(null);
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
-  const label = kind === 'year' ? String(year) : `${MESES[month]} de ${year}`;
+  const label =
+    kind === 'year'
+      ? String(year)
+      : lang === 'en'
+        ? `${monthName(month)} ${year}`
+        : `${monthName(month)} de ${year}`;
 
   function shift(delta: number) {
     setFeedback(null);
@@ -54,7 +57,7 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
   async function generate(send: boolean): Promise<ReportResult | null> {
     const supabase = createClient();
     const { data, error } = await supabase.functions.invoke<ReportResult>('export-report', {
-      body: { period: kind, year, month: month + 1, send },
+      body: { period: kind, year, month: month + 1, send, lang },
     });
     if (error) {
       let msg = error.message;
@@ -62,15 +65,15 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
         const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
         if (ctx?.json) { const b = await ctx.json(); msg = b?.error ?? msg; }
       } catch { /* ignore */ }
-      setFeedback({ kind: 'err', text: msg ?? 'Não consegui gerar o relatório.' });
+      setFeedback({ kind: 'err', text: msg ?? t.report.genericError });
       return null;
     }
     if (!data?.ok) {
-      setFeedback({ kind: 'err', text: data?.error ?? 'Não consegui gerar o relatório.' });
+      setFeedback({ kind: 'err', text: data?.error ?? t.report.genericError });
       return null;
     }
     if (data.count === 0) {
-      setFeedback({ kind: 'err', text: `Não há lançamentos em ${label} para exportar.` });
+      setFeedback({ kind: 'err', text: t.report.noExpenses(label) });
       return null;
     }
     return data;
@@ -81,7 +84,12 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
     setBusy('email');
     const res = await generate(true);
     setBusy(null);
-    if (res) setFeedback({ kind: 'ok', text: `Relatório de ${label} enviado para ${userEmail ?? 'seu e-mail'}. 📬` });
+    if (res) {
+      setFeedback({
+        kind: 'ok',
+        text: t.web.reportSent(label, userEmail ?? t.report.yourEmail),
+      });
+    }
   }
 
   async function handleDownload() {
@@ -103,21 +111,21 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
         a.remove();
         URL.revokeObjectURL(url);
       } catch {
-        setFeedback({ kind: 'err', text: 'Não consegui baixar o arquivo.' });
+        setFeedback({ kind: 'err', text: t.web.downloadFailed });
       }
     }
     setBusy(null);
   }
 
   const kindOptions: { key: Kind; label: string; icon: string }[] = [
-    { key: 'month', label: 'Mensal', icon: 'calendar-month' },
-    { key: 'year', label: 'Anual', icon: 'calendar-blank-multiple' },
+    { key: 'month', label: t.report.monthly, icon: 'calendar-month' },
+    { key: 'year', label: t.report.yearly, icon: 'calendar-blank-multiple' },
   ];
 
   return (
-    <Modal open={open} onClose={() => !busy && onClose()} title="Exportar relatório" maxWidth={420}>
+    <Modal open={open} onClose={() => !busy && onClose()} title={t.report.title} maxWidth={420}>
       <p className="mb-5 text-sm leading-relaxed" style={{ color: colors.textMuted }}>
-        Uma planilha Excel bonita com todos os seus gastos do período — no seu e-mail ou baixada na hora.
+        {t.web.reportSubtitle}
       </p>
 
       {/* Tipo */}
@@ -147,11 +155,11 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
         className="mb-5 flex items-center justify-between rounded-xl px-2"
         style={{ backgroundColor: colors.surface, height: 52 }}
       >
-        <button onClick={() => shift(-1)} className="rounded-lg p-2 transition hover:opacity-70" aria-label="Anterior">
+        <button onClick={() => shift(-1)} className="rounded-lg p-2 transition hover:opacity-70" aria-label={t.web.previous}>
           <AppIcon icon="chevron-left" size={24} color={colors.text} />
         </button>
         <span className="font-bold" style={{ color: colors.text }}>{label}</span>
-        <button onClick={() => shift(1)} className="rounded-lg p-2 transition hover:opacity-70" aria-label="Próximo">
+        <button onClick={() => shift(1)} className="rounded-lg p-2 transition hover:opacity-70" aria-label={t.web.next}>
           <AppIcon icon="chevron-right" size={24} color={colors.text} />
         </button>
       </div>
@@ -175,7 +183,7 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
         style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
       >
         <AppIcon icon="email-fast" size={20} color={colors.onPrimary} />
-        {busy === 'email' ? 'Enviando…' : 'Enviar no meu e-mail'}
+        {busy === 'email' ? t.web.sending : t.report.sendEmail}
       </button>
 
       <button
@@ -185,7 +193,7 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
         style={{ backgroundColor: colors.surface, color: colors.text }}
       >
         <AppIcon icon="download" size={20} color={colors.text} />
-        {busy === 'download' ? 'Gerando…' : 'Baixar planilha'}
+        {busy === 'download' ? t.web.generating : t.web.downloadSheet}
       </button>
     </Modal>
   );

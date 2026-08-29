@@ -5,10 +5,12 @@ import { useState } from 'react';
 import { GoogleIcon } from '../../src/components/GoogleIcon';
 import { Mascot } from '../../src/components/Mascot';
 import { useAuth } from '../../src/context/AuthContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 
 export default function LoginPage() {
   const { colors } = useTheme();
+  const t = useT();
   const { signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function LoginPage() {
           Meus Gastos
         </h1>
         <p className="mt-1 font-bold" style={{ color: colors.primary }}>
-          Pra onde vai cada centavo.
+          {t.login.slogan}
         </p>
 
         <button
@@ -61,7 +63,7 @@ export default function LoginPage() {
           ) : (
             <>
               <GoogleIcon size={22} />
-              Continuar com Google
+              {t.login.google}
             </>
           )}
         </button>
@@ -73,13 +75,13 @@ export default function LoginPage() {
         )}
 
         <p className="mt-6 text-xs leading-5" style={{ color: colors.textMuted }}>
-          Ao continuar, você concorda com os{' '}
+          {t.login.consentPrefix}{' '}
           <Link href="/legal/terms" className="font-bold" style={{ color: colors.primary }}>
-            Termos de Uso
+            {t.login.terms}
           </Link>{' '}
-          e a{' '}
+          {t.login.consentMiddle}{' '}
           <Link href="/legal/privacy" className="font-bold" style={{ color: colors.primary }}>
-            Política de Privacidade
+            {t.login.privacy}
           </Link>
           .
         </p>

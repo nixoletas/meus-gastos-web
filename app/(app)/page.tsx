@@ -10,6 +10,7 @@ import { PiggyMark } from '../../src/components/Mascot';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { useAuth } from '../../src/context/AuthContext';
 import { useData } from '../../src/context/DataContext';
+import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { Expense } from '../../src/types';
 import { formatBRL } from '../../src/utils/currency';
@@ -22,6 +23,7 @@ import {
 
 export default function DashboardPage() {
   const { colors } = useTheme();
+  const t = useT();
   const { expenses, categories, budgets, getCategory, loading, hideValue, setHideValue } =
     useData();
   const { session } = useAuth();
@@ -38,8 +40,8 @@ export default function DashboardPage() {
     const raw = fromMeta
       ? String(fromMeta).trim().split(' ')[0]
       : (session?.user.email?.split('@')[0] ?? '').split(/[._-]/)[0];
-    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'você';
-  }, [session?.user.email, session?.user.user_metadata]);
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : t.home.fallbackName;
+  }, [session?.user.email, session?.user.user_metadata, t]);
 
   const avatarUrl = useMemo(() => {
     const meta = (session?.user.user_metadata ?? {}) as Record<string, unknown>;
@@ -88,7 +90,7 @@ export default function DashboardPage() {
             <PiggyMark size={40} />
           )}
           <h1 className="text-2xl font-extrabold" style={{ color: colors.text }}>
-            Bora poupar, {firstName}!
+            {t.home.greeting(firstName)}
           </h1>
         </div>
         <PeriodSwitcher date={date} period={period} onChangeDate={setDate} onChangePeriod={setPeriod} />
@@ -101,13 +103,13 @@ export default function DashboardPage() {
       >
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold" style={{ color: hexWithAlpha('#FFFFFF', 0.9) }}>
-            Total gasto {period === 'month' ? 'no mês' : 'no ano'}
+            {period === 'month' ? t.home.totalMonth : t.home.totalYear}
           </div>
           <button
             onClick={() => setHideValue(!hideValue)}
             className="flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-90"
             style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.22) }}
-            aria-label={hideValue ? 'Mostrar valor' : 'Ocultar valor'}
+            aria-label={hideValue ? t.web.showValue : t.web.hideValue}
           >
             <AppIcon icon={hideValue ? 'eye-off' : 'eye'} size={18} color="#FFFFFF" />
           </button>
@@ -121,7 +123,7 @@ export default function DashboardPage() {
             style={{ backgroundColor: hexWithAlpha('#FFFFFF', 0.18), color: '#FFFFFF' }}
           >
             <AppIcon icon="receipt-text-outline" size={14} color="#FFFFFF" />
-            {list.length} {list.length === 1 ? 'lançamento' : 'lançamentos'}
+            {t.home.entriesCount(list.length)}
           </span>
           {trend !== null && (
             <span
@@ -133,8 +135,9 @@ export default function DashboardPage() {
                 size={14}
                 color="#FFFFFF"
               />
-              {trend > 0 ? '+' : ''}
-              {Math.round(trend * 100)}% vs {period === 'month' ? 'mês' : 'ano'} anterior
+              {(period === 'month' ? t.home.trendMonth : t.home.trendYear)(
+                `${trend > 0 ? '+' : ''}${Math.round(trend * 100)}`
+              )}
             </span>
           )}
         </div>
@@ -150,10 +153,15 @@ export default function DashboardPage() {
           <AppIcon icon="alert-circle" size={22} color={colors.danger} />
           <div className="flex-1">
             <div className="font-bold" style={{ color: colors.text }}>
-              Limite ultrapassado{a.category ? ` · ${a.category.name}` : ' · Geral'}
+              {t.home.limitExceeded}
+              {a.category ? ` · ${a.category.name}` : ` · ${t.common.general}`}
             </div>
             <div className="text-sm" style={{ color: colors.textMuted }}>
-              {formatBRL(a.spent)} de {formatBRL(a.budget.limit_amount)} ({Math.round(a.ratio * 100)}%)
+              {t.home.alertAmounts(
+                formatBRL(a.spent),
+                formatBRL(a.budget.limit_amount),
+                Math.round(a.ratio * 100)
+              )}
             </div>
           </div>
         </div>
@@ -162,9 +170,11 @@ export default function DashboardPage() {
       {/* Limite de gastos */}
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold" style={{ color: colors.text }}>Limite de gastos</h2>
+          <h2 className="text-lg font-bold" style={{ color: colors.text }}>
+            {t.home.spendingLimits}
+          </h2>
           <Link href="/limites" className="text-sm font-bold" style={{ color: colors.primary }}>
-            Gerenciar
+            {t.home.manage}
           </Link>
         </div>
 
@@ -181,9 +191,11 @@ export default function DashboardPage() {
               <AppIcon icon="bell-plus" size={22} color={colors.warning} />
             </span>
             <span className="flex-1">
-              <span className="block font-bold" style={{ color: colors.text }}>Defina um limite</span>
+              <span className="block font-bold" style={{ color: colors.text }}>
+                {t.home.setLimitTitle}
+              </span>
               <span className="block text-sm" style={{ color: colors.textMuted }}>
-                Receba alertas ao se aproximar do teto de gastos.
+                {t.home.setLimitText}
               </span>
             </span>
             <AppIcon icon="chevron-right" size={22} color={colors.textMuted} />
@@ -212,7 +224,7 @@ export default function DashboardPage() {
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate font-semibold" style={{ color: colors.text }}>
-                        {b.category?.name ?? 'Limite geral'}
+                        {b.category?.name ?? t.common.generalLimit}
                       </span>
                       <span className="shrink-0 font-bold" style={{ color: colors.text }}>
                         {formatBRL(b.spent)} / {formatBRL(b.budget.limit_amount)}
@@ -226,8 +238,10 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-xs font-semibold" style={{ color: barColor }}>
                       {b.spent >= b.budget.limit_amount
-                        ? `Ultrapassou ${formatBRL(b.spent - b.budget.limit_amount)}`
-                        : `Faltam ${formatBRL(b.budget.limit_amount - b.spent)} para o limite`}
+                        ? t.home.overBy(formatBRL(b.spent - b.budget.limit_amount))
+                        : t.home.remainingToLimit(
+                            formatBRL(b.budget.limit_amount - b.spent)
+                          )}
                     </div>
                   </div>
                 </div>
@@ -239,9 +253,13 @@ export default function DashboardPage() {
 
       {/* Lançamentos */}
       {loading ? (
-        <Empty colors={colors} icon="loading" text="Carregando…" />
+        <Empty colors={colors} icon="loading" text={t.web.loading} />
       ) : groups.length === 0 ? (
-        <Empty colors={colors} icon="emoticon-happy-outline" text="Nenhum gasto no período. Que economia!" />
+        <Empty
+          colors={colors}
+          icon="emoticon-happy-outline"
+          text={t.web.noExpensesInPeriod}
+        />
       ) : (
         <div className="space-y-6">
           {groups.map(([day, items]) => (
@@ -268,7 +286,7 @@ export default function DashboardPage() {
                       <CategoryIcon icon={cat?.icon ?? 'tag'} color={parent?.color ?? colors.textMuted} size={42} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold" style={{ color: colors.text }}>
-                          {cat?.name ?? 'Sem categoria'}
+                          {cat?.name ?? t.common.noCategory}
                         </div>
                         {(e.note || e.items_count > 0 || e.has_receipt) && (
                           <div className="flex items-center gap-2 text-sm" style={{ color: colors.textMuted }}>
@@ -280,8 +298,8 @@ export default function DashboardPage() {
                                 style={{ backgroundColor: colors.surface }}
                               >
                                 {e.items_count > 0
-                                  ? `${e.items_count} ${e.items_count === 1 ? 'item' : 'itens'}`
-                                  : 'notinha'}
+                                  ? t.expenseRow.itemsCount(e.items_count)
+                                  : t.common.receipt}
                               </span>
                             )}
                           </div>

@@ -40,6 +40,7 @@ const UI = [
   'logout', 'account-remove', 'white-balance-sunny', 'weather-night', 'laptop',
   'cash-multiple', 'dots-horizontal', 'emoticon-happy-outline', 'loading', 'tag',
   'eye', 'eye-off', 'file-excel', 'calendar-blank-multiple', 'email-fast', 'download',
+  'translate', 'alphabetical-variant',
 ];
 
 const names = [...new Set([...CATALOG, ...DEFAULTS, ...UI])].sort();

@@ -7,6 +7,7 @@ import { DonutChart } from '../../../src/components/DonutChart';
 import { ExpenseItems } from '../../../src/components/ExpenseItems';
 import { PeriodSwitcher } from '../../../src/components/PeriodSwitcher';
 import { useData } from '../../../src/context/DataContext';
+import { useT } from '../../../src/i18n';
 import { useTheme } from '../../../src/theme/ThemeContext';
 import { formatBRL } from '../../../src/utils/currency';
 import { Period, relativeDayLabel } from '../../../src/utils/date';
@@ -19,6 +20,7 @@ import {
 
 export default function GraficosPage() {
   const { colors } = useTheme();
+  const t = useT();
   const { expenses, categories, getCategory } = useData();
   const [date, setDate] = useState(new Date());
   const [period, setPeriod] = useState<Period>('month');
@@ -48,13 +50,13 @@ export default function GraficosPage() {
   );
   const total = useMemo(() => totalForPeriod(expenses, date, period), [expenses, date, period]);
 
-  const slices = totals.map((t) => ({
-    value: t.total,
-    color: t.category?.color ?? colors.textMuted,
-    label: `${t.category?.name ?? 'Sem categoria'} · ${formatBRL(t.total)}`,
+  const slices = totals.map((row) => ({
+    value: row.total,
+    color: row.category?.color ?? colors.textMuted,
+    label: `${row.category?.name ?? t.common.noCategory} · ${formatBRL(row.total)}`,
   }));
 
-  const activeIndex = selected ? totals.findIndex((t) => t.categoryId === selected) : -1;
+  const activeIndex = selected ? totals.findIndex((row) => row.categoryId === selected) : -1;
   const activeTotal = activeIndex >= 0 ? totals[activeIndex] : null;
 
   // Selecionar pela pizza precisa trazer o item correspondente da legenda pra vista.
@@ -71,13 +73,13 @@ export default function GraficosPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-extrabold" style={{ color: colors.text }}>Gráficos</h1>
+        <h1 className="text-2xl font-extrabold" style={{ color: colors.text }}>{t.charts.title}</h1>
         <PeriodSwitcher date={date} period={period} onChangeDate={setDate} onChangePeriod={setPeriod} />
       </div>
 
       {totals.length === 0 ? (
         <div className="rounded-2xl py-20 text-center" style={{ backgroundColor: colors.card, color: colors.textMuted }}>
-          Sem dados para o período.
+          {t.web.noDataForPeriod}
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -92,57 +94,65 @@ export default function GraficosPage() {
               onSelect={(i) => selectCategory(totals[i].categoryId)}
             >
               <div className="text-xs font-semibold" style={{ color: colors.textMuted }}>
-                {activeTotal ? activeTotal.category?.name ?? 'Sem categoria' : 'Total'}
+                {activeTotal
+                  ? activeTotal.category?.name ?? t.common.noCategory
+                  : t.charts.total}
               </div>
               <div className="text-2xl font-extrabold" style={{ color: colors.text }}>
                 {formatBRL(activeTotal ? activeTotal.total : total)}
               </div>
               {activeTotal && (
                 <div className="mt-0.5 text-xs font-semibold" style={{ color: colors.textMuted }}>
-                  {(activeTotal.percent * 100).toFixed(0)}% do período
+                  {t.web.percentOfPeriod((activeTotal.percent * 100).toFixed(0))}
                 </div>
               )}
             </DonutChart>
 
             <p className="mt-4 text-center text-xs" style={{ color: colors.textMuted }}>
               {activeTotal
-                ? 'Clique de novo na fatia para ver tudo.'
-                : 'Clique em uma fatia para filtrar a categoria.'}
+                ? t.web.clickSliceAgain
+                : t.web.clickSlice}
             </p>
           </div>
 
           {/* Legenda / lista — altura travada pra não empurrar o gráfico pra fora da tela. */}
           <div className="max-h-104 space-y-2 overflow-y-auto p-1">
-            {totals.map((t) => {
-              const active = selected === t.categoryId;
+            {totals.map((row) => {
+              const active = selected === row.categoryId;
               const dimmed = selected !== null && !active;
               return (
                 <button
-                  key={t.categoryId ?? 'none'}
+                  key={row.categoryId ?? 'none'}
                   ref={(el) => {
-                    if (t.categoryId) {
-                      if (el) legendRefs.current.set(t.categoryId, el);
-                      else legendRefs.current.delete(t.categoryId);
+                    if (row.categoryId) {
+                      if (el) legendRefs.current.set(row.categoryId, el);
+                      else legendRefs.current.delete(row.categoryId);
                     }
                   }}
-                  onClick={() => selectCategory(t.categoryId)}
+                  onClick={() => selectCategory(row.categoryId)}
                   className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition hover:opacity-90"
                   style={{
                     backgroundColor: colors.card,
-                    outline: active ? `2px solid ${t.category?.color ?? colors.primary}` : 'none',
+                    outline: active ? `2px solid ${row.category?.color ?? colors.primary}` : 'none',
                     opacity: dimmed ? 0.5 : 1,
                   }}
                 >
-                  <CategoryIcon icon={t.category?.icon ?? 'tag'} color={t.category?.color ?? colors.textMuted} size={40} />
+                  <CategoryIcon
+                    icon={row.category?.icon ?? 'tag'}
+                    color={row.category?.color ?? colors.textMuted}
+                    size={40}
+                  />
                   <div className="flex-1">
                     <div className="font-semibold" style={{ color: colors.text }}>
-                      {t.category?.name ?? 'Sem categoria'}
+                      {row.category?.name ?? t.common.noCategory}
                     </div>
                     <div className="text-sm" style={{ color: colors.textMuted }}>
-                      {(t.percent * 100).toFixed(0)}% · {t.count} {t.count === 1 ? 'gasto' : 'gastos'}
+                      {(row.percent * 100).toFixed(0)}% · {t.web.expenseCount(row.count)}
                     </div>
                   </div>
-                  <div className="font-bold" style={{ color: colors.text }}>{formatBRL(t.total)}</div>
+                  <div className="font-bold" style={{ color: colors.text }}>
+                    {formatBRL(row.total)}
+                  </div>
                 </button>
               );
             })}
@@ -155,14 +165,14 @@ export default function GraficosPage() {
         <div className="mt-8">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold" style={{ color: colors.text }}>
-              {getCategory(selected)?.name} · por subcategoria
+              {t.web.bySubcategory(getCategory(selected)?.name ?? '')}
             </h2>
             <button
               onClick={() => selectCategory(null)}
               className="rounded-full px-3 py-1.5 text-xs font-bold transition hover:opacity-80"
               style={{ backgroundColor: colors.surface, color: colors.textMuted }}
             >
-              ✕ Limpar filtro
+              {t.web.clearFilter}
             </button>
           </div>
           <div className="space-y-2">
@@ -184,9 +194,9 @@ export default function GraficosPage() {
                       size={36}
                     />
                     <div className="min-w-0 flex-1 font-semibold" style={{ color: colors.text }}>
-                      <span className="truncate">{b.sub?.name ?? 'Sem subcategoria'}</span>
+                      <span className="truncate">{b.sub?.name ?? t.common.noSubcategory}</span>
                       <span className="ml-2 text-xs font-medium" style={{ color: colors.textMuted }}>
-                        {b.count} {b.count === 1 ? 'gasto' : 'gastos'}
+                        {t.web.expenseCount(b.count)}
                       </span>
                     </div>
                     <div className="text-sm" style={{ color: colors.textMuted }}>{(b.percent * 100).toFixed(0)}%</div>
@@ -214,7 +224,7 @@ export default function GraficosPage() {
                             >
                               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: parentColor }} />
                               <div className="min-w-0 flex-1 truncate text-sm" style={{ color: colors.text }}>
-                                {e.note?.trim() || (b.sub?.name ?? 'Sem subcategoria')}
+                                {e.note?.trim() || (b.sub?.name ?? t.common.noSubcategory)}
                               </div>
                               <div className="shrink-0 text-xs" style={{ color: colors.textMuted }}>
                                 {relativeDayLabel(e.occurred_at)}

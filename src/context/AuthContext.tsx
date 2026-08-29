@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { tNow } from '../i18n';
 
 type AuthResult = { error: string | null };
 
@@ -23,11 +24,12 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/** Traduz mensagens comuns de erro do Supabase para o idioma ativo. */
 function traduzErro(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('network')) return 'Sem conexão. Verifique sua internet.';
-  if (m.includes('rate limit') || m.includes('too many'))
-    return 'Muitas tentativas. Aguarde um instante e tente de novo.';
+  const erros = tNow().errors;
+  if (m.includes('network')) return erros.noConnection;
+  if (m.includes('rate limit') || m.includes('too many')) return erros.rateLimit;
   return message;
 }
 

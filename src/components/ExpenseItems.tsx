@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { useT } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { loadItemsOfExpense } from '../lib/receipts';
 import { useTheme } from '../theme/ThemeContext';
 import { ExpenseItem } from '../types';
@@ -14,14 +16,23 @@ type Props = {
 };
 
 /** "1,24 kg" ou "3 un" — só aparece quando diz alguma coisa. */
-function quantidadeLabel(quantity: number, unit: string | null): string | null {
+function quantidadeLabel(
+  quantity: number,
+  unit: string | null,
+  defaultUnit: string
+): string | null {
   const valor = Number(quantity);
   if (!Number.isFinite(valor) || valor <= 0) return null;
   if (valor === 1 && !unit) return null;
+  const separador = getActiveLang() === 'en' ? '.' : ',';
   const numero = Number.isInteger(valor)
     ? String(valor)
-    : valor.toFixed(3).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',');
-  return `${numero} ${unit ?? 'un'}`;
+    : valor
+        .toFixed(3)
+        .replace(/0+$/, '')
+        .replace(/\.$/, '')
+        .replace('.', separador);
+  return `${numero} ${unit ?? defaultUnit}`;
 }
 
 /**
@@ -32,6 +43,7 @@ function quantidadeLabel(quantity: number, unit: string | null): string | null {
  */
 export function ExpenseItems({ expenseId, color }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<ExpenseItem[] | null>(null);
 
@@ -48,7 +60,7 @@ export function ExpenseItems({ expenseId, color }: Props) {
   if (items === null) {
     return (
       <div className="py-1 pl-6 text-xs" style={{ color: colors.textMuted }}>
-        Carregando itens…
+        {t.web.loadingItems}
       </div>
     );
   }
@@ -56,7 +68,7 @@ export function ExpenseItems({ expenseId, color }: Props) {
   if (items.length === 0) {
     return (
       <div className="py-1 pl-6 text-xs" style={{ color: colors.textMuted }}>
-        Esse lançamento não tem itens.
+        {t.expenseRow.noItems}
       </div>
     );
   }
@@ -64,7 +76,11 @@ export function ExpenseItems({ expenseId, color }: Props) {
   return (
     <div className="space-y-1 py-1 pl-6">
       {items.map((item) => {
-        const quantidade = quantidadeLabel(Number(item.quantity), item.unit);
+        const quantidade = quantidadeLabel(
+          Number(item.quantity),
+          item.unit,
+          t.expenseRow.defaultUnit
+        );
         return (
           <div key={item.id} className="flex items-center gap-2">
             <span

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 
 /** Modais abertos, do mais antigo ao mais recente: só o do topo responde ao Esc. */
@@ -21,6 +22,7 @@ type Props = {
 
 export function Modal({ open, onClose, title, children, maxWidth = 480, sidePanel }: Props) {
   const { colors } = useTheme();
+  const t = useT();
 
   // Ref evita reentrar na pilha a cada render quando onClose é uma arrow inline.
   const onCloseRef = useRef(onClose);
@@ -67,7 +69,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 480, sidePane
               onClick={onClose}
               className="flex h-9 w-9 items-center justify-center rounded-full text-xl transition hover:opacity-70"
               style={{ color: colors.textMuted, backgroundColor: colors.surface }}
-              aria-label="Fechar"
+              aria-label={t.common.close}
             >
               ✕
             </button>

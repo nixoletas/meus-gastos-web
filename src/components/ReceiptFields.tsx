@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useT } from '../i18n';
+import { getActiveLang } from '../i18n/active';
 import { newDraftItem, sumItems } from '../lib/receipts';
 import { ReceiptPhase } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
@@ -29,23 +31,24 @@ type Props = {
   onUseItemsTotal: (total: number) => void;
 };
 
-const PAYMENT_LABEL: Record<string, string> = {
-  credito: 'Crédito',
-  debito: 'Débito',
-  pix: 'Pix',
-  dinheiro: 'Dinheiro',
-  vale: 'Vale',
-  outro: 'Outro',
-};
-
-function issuedLabel(iso: string | null): string | null {
+function issuedLabel(
+  iso: string | null,
+  join: (date: string, time: string) => string
+): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} às ${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}`;
+  const dia = pad(date.getDate());
+  const mes = pad(date.getMonth() + 1);
+  const dataCurta = getActiveLang() === 'en' ? `${mes}/${dia}` : `${dia}/${mes}`;
+  return join(dataCurta, `${pad(date.getHours())}:${pad(date.getMinutes())}`);
+}
+
+/** Quantidade com o separador decimal do idioma ativo. */
+function formatQuantity(value: number): string {
+  const texto = String(value);
+  return getActiveLang() === 'en' ? texto : texto.replace('.', ',');
 }
 
 /**
@@ -71,6 +74,7 @@ export function ReceiptFields({
   onUseItemsTotal,
 }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [qrLink, setQrLink] = useState('');
@@ -81,9 +85,15 @@ export function ReceiptFields({
   const differsFromExpense = items.length > 0 && Math.abs(total - expenseAmount) > 0.05;
 
   const meta = [
-    issuedLabel(receipt?.issued_at ?? null),
-    receipt?.payment_method ? PAYMENT_LABEL[receipt.payment_method] ?? null : null,
-    receipt?.total != null ? `Total na nota: ${formatBRL(Number(receipt.total))}` : null,
+    issuedLabel(receipt?.issued_at ?? null, t.receiptSection.issuedAt),
+    receipt?.payment_method
+      ? t.receiptSection.payment[
+          receipt.payment_method as keyof typeof t.receiptSection.payment
+        ] ?? null
+      : null,
+    receipt?.total != null
+      ? t.receiptSection.receiptTotal(formatBRL(Number(receipt.total)))
+      : null,
   ].filter(Boolean) as string[];
 
   function update(key: string, patch: Partial<DraftItem>) {
@@ -117,11 +127,11 @@ export function ReceiptFields({
     <div className="mb-4">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>
-          Notinha e itens
+          {t.receiptSection.label}
         </span>
         {items.length > 0 && (
           <span className="text-xs font-semibold" style={{ color: colors.textMuted }}>
-            {items.length} {items.length === 1 ? 'item' : 'itens'} · {formatBRL(total)}
+            {t.receiptSection.countAndTotal(items.length, formatBRL(total))}
           </span>
         )}
       </div>
@@ -161,7 +171,7 @@ export function ReceiptFields({
             }}
           >
             <AppIcon icon="camera" size={20} color={colors.primary} />
-            {dragging ? 'Solte a foto aqui' : 'Arraste a foto da nota ou clique para escolher'}
+            {dragging ? t.web.dropPhotoHere : t.web.dragOrClick}
           </button>
 
           {/* Caminho exato: o link do QR não passa por leitura de imagem. */}
@@ -175,7 +185,7 @@ export function ReceiptFields({
                   enviarLink();
                 }
               }}
-              placeholder="ou cole aqui o link do QR Code do cupom"
+              placeholder={t.web.qrLinkPlaceholder}
               className="min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
               style={{
                 backgroundColor: colors.surface,
@@ -190,13 +200,12 @@ export function ReceiptFields({
               className="rounded-xl px-4 py-2 text-sm font-bold transition hover:opacity-90 disabled:opacity-40"
               style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
             >
-              Ler nota
+              {t.web.readReceipt}
             </button>
           </div>
 
           <div className="mt-1.5 text-xs" style={{ color: colors.textMuted }}>
-            Com o link do QR, os itens vêm direto da SEFAZ, sem enviar imagem. Na
-            foto, quem lê é o Google — e ela funciona em qualquer recibo.
+            {t.web.receiptHint}
           </div>
         </>
       )}
@@ -208,10 +217,10 @@ export function ReceiptFields({
         >
           <div className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
             {phase === 'uploading'
-              ? 'Enviando a foto…'
+              ? t.receiptSection.uploading
               : receipt?.source === 'qrcode'
-                ? 'Consultando a nota na SEFAZ…'
-                : 'Lendo sua notinha…'}
+                ? t.receiptSection.queryingSefaz
+                : t.receiptSection.readingReceipt}
           </div>
           <div className="space-y-2">
             {['82%', '64%', '73%'].map((width) => (
@@ -223,7 +232,7 @@ export function ReceiptFields({
             ))}
           </div>
           <div className="mt-3 text-xs" style={{ color: colors.textMuted }}>
-            Pode continuar preenchendo, eu aviso quando terminar.
+            {t.receiptSection.keepGoing}
           </div>
         </div>
       )}
@@ -234,20 +243,20 @@ export function ReceiptFields({
           style={{ backgroundColor: colors.dangerSoft, borderColor: hexWithAlpha(colors.danger, 0.35) }}
         >
           <div className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-            {error ?? 'Não consegui ler essa foto.'}
+            {error ?? t.receiptSection.readFailed}
           </div>
           <div className="flex flex-wrap gap-2">
             {!!receipt && (
               <SmallButton onClick={onRetry} colors={colors}>
-                Tentar de novo
+                {t.common.tryAgain}
               </SmallButton>
             )}
             <SmallButton onClick={() => fileRef.current?.click()} colors={colors}>
-              Outra foto
+              {t.receiptSection.anotherPhoto}
             </SmallButton>
             {!!receipt && (
               <SmallButton onClick={onRemove} colors={colors} tone={colors.danger}>
-                Remover
+                {t.common.remove}
               </SmallButton>
             )}
           </div>
@@ -261,11 +270,11 @@ export function ReceiptFields({
         >
           <div className="flex items-center gap-3">
             {photoUrl ? (
-              <a href={photoUrl} target="_blank" rel="noreferrer" title="Ver a nota inteira">
+              <a href={photoUrl} target="_blank" rel="noreferrer" title={t.web.seeWholeReceipt}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photoUrl}
-                  alt="Foto da nota"
+                  alt={t.web.receiptPhotoAlt}
                   className="h-16 w-12 rounded-lg object-cover"
                 />
               </a>
@@ -273,14 +282,17 @@ export function ReceiptFields({
               <div
                 className="flex h-16 w-12 items-center justify-center rounded-lg text-xl"
                 style={{ backgroundColor: colors.surface, color: colors.textMuted }}
-                title={receipt.source === 'qrcode' ? 'Notinha lida pelo QR Code' : 'Sem foto'}
+                title={receipt.source === 'qrcode' ? t.web.readByQr : t.web.noPhoto}
               >
                 {receipt.source === 'qrcode' ? '▦' : '🧾'}
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="truncate font-bold" style={{ color: colors.text }}>
-                {receipt.merchant ?? (receipt.source === 'qrcode' ? 'Nota fiscal' : 'Notinha anexada')}
+                {receipt.merchant ??
+                  (receipt.source === 'qrcode'
+                    ? t.receiptSection.taxReceipt
+                    : t.receiptSection.attachedReceipt)}
               </div>
               {meta.length > 0 && (
                 <div className="truncate text-xs" style={{ color: colors.textMuted }}>
@@ -291,11 +303,11 @@ export function ReceiptFields({
             <button
               type="button"
               onClick={onRemove}
-              title="Remover a notinha"
+              title={t.web.removeReceipt}
               className="rounded-lg px-2 py-1 text-xs font-bold transition hover:opacity-80"
               style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
             >
-              Remover
+              {t.common.remove}
             </button>
           </div>
 
@@ -304,7 +316,7 @@ export function ReceiptFields({
               className="mt-3 rounded-lg p-2 text-xs"
               style={{ backgroundColor: hexWithAlpha(colors.warning, 0.14), color: colors.text }}
             >
-              Essa nota fiscal já foi lançada antes. Se não for engano, pode continuar.
+              {t.receiptSection.duplicate}
             </div>
           )}
 
@@ -313,8 +325,10 @@ export function ReceiptFields({
               className="mt-3 rounded-lg p-2 text-xs"
               style={{ backgroundColor: hexWithAlpha(colors.warning, 0.14), color: colors.text }}
             >
-              Os itens somam {formatBRL(total)}, mas a nota diz{' '}
-              {formatBRL(Number(receipt.total ?? 0))}. Confira as linhas.
+              {t.receiptSection.mismatch(
+                formatBRL(total),
+                formatBRL(Number(receipt.total ?? 0))
+              )}
             </div>
           )}
         </div>
@@ -334,17 +348,17 @@ export function ReceiptFields({
               <input
                 value={item.description}
                 onChange={(e) => update(item.key, { description: e.target.value })}
-                placeholder="Descrição do item"
+                placeholder={t.web.itemDescriptionPlaceholder}
                 className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-sm outline-none focus:ring-1"
                 style={{ color: colors.text }}
               />
               <input
-                value={String(item.quantity).replace('.', ',')}
+                value={formatQuantity(item.quantity)}
                 onChange={(e) => {
                   const parsed = Number.parseFloat(e.target.value.replace(',', '.'));
                   update(item.key, { quantity: Number.isFinite(parsed) && parsed > 0 ? parsed : 1 });
                 }}
-                title="Quantidade"
+                title={t.itemEditor.quantity}
                 className="w-14 rounded-lg px-2 py-1.5 text-center text-xs outline-none"
                 style={{ backgroundColor: colors.surface, color: colors.textMuted }}
               />
@@ -358,7 +372,7 @@ export function ReceiptFields({
               <button
                 type="button"
                 onClick={() => onChangeItems(items.filter((other) => other.key !== item.key))}
-                title="Remover item"
+                title={t.web.removeItem}
                 className="px-1 text-lg leading-none transition hover:opacity-70"
                 style={{ color: colors.textMuted }}
               >
@@ -375,13 +389,13 @@ export function ReceiptFields({
           colors={colors}
           tone={colors.primary}
         >
-          + Adicionar item
+          {t.web.addItemPlus}
         </SmallButton>
 
         {/* O OCR quase sempre acerta o total; trocar tem que ser um clique. */}
         {differsFromExpense && (
           <SmallButton onClick={() => onUseItemsTotal(total)} colors={colors} tone={colors.primary}>
-            Usar {formatBRL(total)}
+            {t.receiptSection.useTotal(formatBRL(total))}
           </SmallButton>
         )}
       </div>

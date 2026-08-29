@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useT } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { Category } from '../types';
 import { categoryPalette } from '../theme/colors';
@@ -21,6 +22,7 @@ type Props = {
 
 export function CategoryModal({ open, onClose, category, parentId }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const { categories, addCategory, updateCategory, deleteCategory } = useData();
 
   const parent = parentId ? categories.find((c) => c.id === parentId) : undefined;
@@ -77,11 +79,11 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
 
   const title = category
     ? isSub
-      ? 'Editar subcategoria'
-      : 'Editar categoria'
+      ? t.categoryForm.editSub
+      : t.categoryForm.editCat
     : isSub
-      ? 'Nova subcategoria'
-      : 'Nova categoria';
+      ? t.categoryForm.newSub
+      : t.categoryForm.newCat;
 
   return (
     <Modal open={open} onClose={onClose} title={title} maxWidth={520}>
@@ -91,7 +93,9 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={isSub ? 'Nome da subcategoria' : 'Nome da categoria'}
+          placeholder={
+            isSub ? t.web.subcategoryNamePlaceholder : t.web.categoryNamePlaceholder
+          }
           className="flex-1 rounded-xl border px-3 py-3 text-lg font-semibold outline-none"
           style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
         />
@@ -100,14 +104,14 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
       {!isSub && (
         <div className="mb-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>
-            Cor
+            {t.categoryForm.color}
           </div>
           <ColorPicker value={color} onChange={setColor} />
         </div>
       )}
 
       <div className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>
-        Ícone
+        {t.web.icon}
       </div>
       <IconPicker value={icon} color={effectiveColor} onChange={setIcon} />
 
@@ -118,7 +122,7 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
             className="rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-80"
             style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
           >
-            Excluir
+            {t.common.delete}
           </button>
         )}
         <button
@@ -127,18 +131,14 @@ export function CategoryModal({ open, onClose, category, parentId }: Props) {
           className="ml-auto rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50"
           style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? t.web.saving : t.common.save}
         </button>
       </div>
 
       <ConfirmDialog
         open={confirmDelete}
-        title={isSub ? 'Excluir esta subcategoria?' : 'Excluir esta categoria?'}
-        message={
-          isSub
-            ? 'Os gastos lançados nela continuam no histórico, sem subcategoria.'
-            : 'As subcategorias e o limite dela também somem. Os gastos continuam no histórico, sem categoria.'
-        }
+        title={isSub ? t.web.deleteSubTitle : t.web.deleteCatTitle}
+        message={isSub ? t.web.deleteSubMessage : t.web.deleteCatMessage}
         busy={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}

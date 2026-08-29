@@ -2,12 +2,8 @@
 
 import Link from 'next/link';
 import { use } from 'react';
-import {
-  CONTACT_EMAIL,
-  LAST_UPDATED,
-  PRIVACY,
-  TERMS,
-} from '../../../src/legal/content';
+import { useI18n } from '../../../src/i18n';
+import { CONTACT_EMAIL, legalFor } from '../../../src/legal/content';
 import { useTheme } from '../../../src/theme/ThemeContext';
 
 export default function LegalPage({
@@ -17,9 +13,11 @@ export default function LegalPage({
 }) {
   const { doc } = use(params);
   const { colors } = useTheme();
+  const { t, lang } = useI18n();
+  const legal = legalFor(lang);
   const isPrivacy = doc === 'privacy' || doc === 'privacidade';
-  const sections = isPrivacy ? PRIVACY : TERMS;
-  const title = isPrivacy ? 'Política de Privacidade' : 'Termos de Uso';
+  const sections = isPrivacy ? legal.privacy : legal.terms;
+  const title = isPrivacy ? t.settings.privacyPolicy : t.settings.termsOfUse;
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: colors.background }}>
@@ -29,13 +27,13 @@ export default function LegalPage({
           className="text-sm font-bold"
           style={{ color: colors.primary }}
         >
-          ← Voltar
+          {t.web.backLink}
         </Link>
         <h1 className="mt-4 text-3xl font-extrabold" style={{ color: colors.text }}>
           {title}
         </h1>
         <p className="mt-1 text-sm" style={{ color: colors.textMuted }}>
-          Última atualização: {LAST_UPDATED}
+          {t.legal.lastUpdated(legal.lastUpdated)}
         </p>
 
         <div className="mt-8 space-y-8">
@@ -56,7 +54,7 @@ export default function LegalPage({
         </div>
 
         <p className="mt-12 text-sm" style={{ color: colors.textMuted }}>
-          Contato: <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: colors.primary }}>{CONTACT_EMAIL}</a>
+          {t.web.contact} <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: colors.primary }}>{CONTACT_EMAIL}</a>
         </p>
       </div>
     </main>

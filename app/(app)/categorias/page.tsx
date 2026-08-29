@@ -6,6 +6,7 @@ import { CategoryIcon, hexWithAlpha } from '../../../src/components/CategoryIcon
 import { CategoryModal } from '../../../src/components/CategoryModal';
 import { useData } from '../../../src/context/DataContext';
 import { normalize } from '../../../src/data/icons';
+import { useT } from '../../../src/i18n';
 import { useTheme } from '../../../src/theme/ThemeContext';
 import { Category, CategoryWithSubs } from '../../../src/types';
 
@@ -17,6 +18,7 @@ type ModalState =
 
 export default function CategoriasPage() {
   const { colors } = useTheme();
+  const t = useT();
   const { categoriesWithSubs } = useData();
   const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
   const [query, setQuery] = useState('');
@@ -41,13 +43,15 @@ export default function CategoriasPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold" style={{ color: colors.text }}>Categorias</h1>
+        <h1 className="text-2xl font-extrabold" style={{ color: colors.text }}>
+          {t.categories.title}
+        </h1>
         <button
           onClick={() => setModal({ mode: 'new-parent' })}
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition hover:opacity-90"
           style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
         >
-          <AppIcon icon="plus" size={18} color={colors.onPrimary} /> Nova categoria
+          <AppIcon icon="plus" size={18} color={colors.onPrimary} /> {t.web.newCategory}
         </button>
       </div>
 
@@ -60,12 +64,16 @@ export default function CategoriasPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar categoria ou subcategoria"
+          placeholder={t.categories.searchPlaceholder}
           className="h-11 flex-1 bg-transparent text-sm outline-none"
           style={{ color: colors.text }}
         />
         {query.length > 0 && (
-          <button onClick={() => setQuery('')} aria-label="Limpar" className="transition hover:opacity-70">
+          <button
+            onClick={() => setQuery('')}
+            aria-label={t.web.clear}
+            className="transition hover:opacity-70"
+          >
             <AppIcon icon="close-circle" size={18} color={colors.textMuted} />
           </button>
         )}
@@ -85,10 +93,10 @@ export default function CategoriasPage() {
           </span>
           <span>
             <span className="block font-bold" style={{ color: colors.text }}>
-              {query.trim() ? `Criar “${query.trim()}”` : 'Nova categoria'}
+              {query.trim() ? t.web.createNamed(query.trim()) : t.web.newCategory}
             </span>
             <span className="block text-sm" style={{ color: colors.textMuted }}>
-              Nenhuma categoria encontrada. Toque para criar uma nova.
+              {t.web.noCategoryFound}
             </span>
           </span>
         </button>
@@ -103,7 +111,7 @@ export default function CategoriasPage() {
                 onClick={() => setModal({ mode: 'edit', category: cat, parentId: null })}
                 className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:opacity-70"
                 style={{ backgroundColor: colors.surface }}
-                aria-label="Editar"
+                aria-label={t.web.edit}
               >
                 <AppIcon icon="pencil" size={16} color={colors.textMuted} />
               </button>
@@ -126,7 +134,7 @@ export default function CategoriasPage() {
                 className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
                 style={{ borderColor: colors.border, color: colors.textMuted }}
               >
-                <AppIcon icon="plus" size={14} color={colors.textMuted} /> Subcategoria
+                <AppIcon icon="plus" size={14} color={colors.textMuted} /> {t.web.subcategory}
               </button>
             </div>
           </div>
