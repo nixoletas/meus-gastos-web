@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
-import { useAuth } from '../context/AuthContext';
+import { useLedger } from '../context/LedgerContext';
 import { tNow } from '../i18n';
 import { DraftItem, Receipt } from '../types';
 import {
@@ -41,7 +41,8 @@ type Options = {
 
 export function useReceipt({ expenseId, active, onParsed }: Options) {
   const supabase = useMemo(() => createClient(), []);
-  const { user } = useAuth();
+  // Dono do caderno em que a notinha vai ser gravada.
+  const { ownerId, canWrite } = useLedger();
 
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
@@ -136,7 +137,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
    */
   const attachQr = useCallback(
     async (qrUrl: string) => {
-      if (!user) return;
+      if (!ownerId || !canWrite) return;
       try {
         setError(null);
         const previous = receipt;
@@ -145,7 +146,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setDuplicate(null);
         setPhotoUrl(null);
 
-        const created = await createQrReceipt(supabase, user.id, qrUrl);
+        const created = await createQrReceipt(supabase, ownerId, qrUrl);
         pendingRef.current = created;
         setReceipt(created);
         if (previous) void discardReceipt(supabase, previous);
@@ -156,12 +157,12 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setError(err instanceof Error ? err.message : tNow().errors.readQr);
       }
     },
-    [user, supabase, receipt, runParse]
+    [ownerId, canWrite, supabase, receipt, runParse]
   );
 
   const attach = useCallback(
     async (file: File) => {
-      if (!user) return;
+      if (!ownerId || !canWrite) return;
       try {
         setError(null);
         setPhase('uploading');
@@ -181,7 +182,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
 
         // Trocar de foto não pode deixar a anterior órfã no bucket.
         const previous = receipt;
-        const created = await uploadReceipt(supabase, user.id, blob);
+        const created = await uploadReceipt(supabase, ownerId, blob);
         pendingRef.current = created;
         setReceipt(created);
         if (previous) void discardReceipt(supabase, previous);
@@ -192,7 +193,7 @@ export function useReceipt({ expenseId, active, onParsed }: Options) {
         setError(err instanceof Error ? err.message : tNow().errors.readReceipt);
       }
     },
-    [user, supabase, receipt, runParse, attachQr]
+    [ownerId, canWrite, supabase, receipt, runParse, attachQr]
   );
 
   const retry = useCallback(async () => {

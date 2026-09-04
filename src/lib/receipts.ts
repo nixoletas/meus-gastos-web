@@ -85,12 +85,16 @@ function randomName(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.jpg`;
 }
 
+/**
+ * `ownerId` é o dono do caderno, que nem sempre é quem está mexendo: num
+ * caderno compartilhado, a foto de quem edita vai para a pasta do dono.
+ */
 export async function uploadReceipt(
   supabase: SupabaseClient,
-  userId: string,
+  ownerId: string,
   blob: Blob
 ): Promise<Receipt> {
-  const path = `${userId}/${randomName()}`;
+  const path = `${ownerId}/${randomName()}`;
   const { error: uploadErr } = await supabase.storage
     .from('receipts')
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
@@ -98,7 +102,7 @@ export async function uploadReceipt(
 
   const { data, error } = await supabase
     .from('receipts')
-    .insert({ user_id: userId, expense_id: null, storage_path: path, status: 'pending' })
+    .insert({ user_id: ownerId, expense_id: null, storage_path: path, status: 'pending' })
     .select()
     .single();
 
@@ -113,13 +117,13 @@ export async function uploadReceipt(
 /** Cria a notinha a partir do QR Code, sem foto nenhuma. */
 export async function createQrReceipt(
   supabase: SupabaseClient,
-  userId: string,
+  ownerId: string,
   qrUrl: string
 ): Promise<Receipt> {
   const { data, error } = await supabase
     .from('receipts')
     .insert({
-      user_id: userId,
+      user_id: ownerId,
       expense_id: null,
       source: 'qrcode',
       qr_url: qrUrl,

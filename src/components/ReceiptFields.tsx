@@ -28,6 +28,8 @@ type Props = {
   onRetry: () => void;
   onRemove: () => void;
   onChangeItems: (items: DraftItem[]) => void;
+  /** Caderno de outra pessoa em que só se pode olhar: nada de anexar ou editar. */
+  readOnly?: boolean;
   onUseItemsTotal: (total: number) => void;
 };
 
@@ -71,6 +73,7 @@ export function ReceiptFields({
   onRetry,
   onRemove,
   onChangeItems,
+  readOnly = false,
   onUseItemsTotal,
 }: Props) {
   const { colors } = useTheme();
@@ -123,6 +126,9 @@ export function ReceiptFields({
     onAttachQr(valor);
   }
 
+  // Num caderno alheio sem notinha nem itens não há nada a mostrar.
+  if (readOnly && !receipt && items.length === 0) return null;
+
   return (
     <div className="mb-4">
       <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -150,7 +156,7 @@ export function ReceiptFields({
         }}
       />
 
-      {!receipt && !busy && (
+      {!receipt && !busy && !readOnly && (
         <>
           {/* Arrastar o cupom é o gesto natural de quem já tem a foto no
               computador; o clique continua funcionando para todo o resto. */}
@@ -245,6 +251,7 @@ export function ReceiptFields({
           <div className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
             {error ?? t.receiptSection.readFailed}
           </div>
+          {!readOnly && (
           <div className="flex flex-wrap gap-2">
             {!!receipt && (
               <SmallButton onClick={onRetry} colors={colors}>
@@ -260,6 +267,7 @@ export function ReceiptFields({
               </SmallButton>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -300,15 +308,17 @@ export function ReceiptFields({
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onRemove}
-              title={t.web.removeReceipt}
-              className="rounded-lg px-2 py-1 text-xs font-bold transition hover:opacity-80"
-              style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
-            >
-              {t.common.remove}
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={onRemove}
+                title={t.web.removeReceipt}
+                className="rounded-lg px-2 py-1 text-xs font-bold transition hover:opacity-80"
+                style={{ backgroundColor: colors.dangerSoft, color: colors.danger }}
+              >
+                {t.common.remove}
+              </button>
+            )}
           </div>
 
           {!!duplicate && (
@@ -347,6 +357,7 @@ export function ReceiptFields({
             >
               <input
                 value={item.description}
+                readOnly={readOnly}
                 onChange={(e) => update(item.key, { description: e.target.value })}
                 placeholder={t.web.itemDescriptionPlaceholder}
                 className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-sm outline-none focus:ring-1"
@@ -354,6 +365,7 @@ export function ReceiptFields({
               />
               <input
                 value={formatQuantity(item.quantity)}
+                readOnly={readOnly}
                 onChange={(e) => {
                   const parsed = Number.parseFloat(e.target.value.replace(',', '.'));
                   update(item.key, { quantity: Number.isFinite(parsed) && parsed > 0 ? parsed : 1 });
@@ -364,25 +376,29 @@ export function ReceiptFields({
               />
               <input
                 inputMode="numeric"
+                readOnly={readOnly}
                 value={maskCurrencyInput(reaisToRaw(item.total))}
                 onChange={(e) => update(item.key, { total: rawToReais(e.target.value) })}
                 className="w-24 rounded-lg px-2 py-1.5 text-right text-sm font-bold outline-none"
                 style={{ backgroundColor: colors.surface, color: colors.text }}
               />
-              <button
-                type="button"
-                onClick={() => onChangeItems(items.filter((other) => other.key !== item.key))}
-                title={t.web.removeItem}
-                className="px-1 text-lg leading-none transition hover:opacity-70"
-                style={{ color: colors.textMuted }}
-              >
-                ×
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => onChangeItems(items.filter((other) => other.key !== item.key))}
+                  title={t.web.removeItem}
+                  className="px-1 text-lg leading-none transition hover:opacity-70"
+                  style={{ color: colors.textMuted }}
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
+      {!readOnly && (
       <div className="mt-2 flex flex-wrap gap-2">
         <SmallButton
           onClick={() => onChangeItems([...items, newDraftItem()])}
@@ -399,6 +415,7 @@ export function ReceiptFields({
           </SmallButton>
         )}
       </div>
+      )}
     </div>
   );
 }

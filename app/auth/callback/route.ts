@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Convite da família feito para este e-mail: vincula antes do primeiro
+      // render, para o caderno compartilhado já aparecer na lista. A RPC é
+      // idempotente — o LedgerContext chama de novo no cliente.
+      await supabase.rpc('claim_household_invites');
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

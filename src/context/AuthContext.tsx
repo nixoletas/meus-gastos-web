@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { clearActiveLedger } from '../lib/activeLedger';
 import { tNow } from '../i18n';
 
 type AuthResult = { error: string | null };
@@ -68,6 +69,8 @@ export function AuthProvider({
   };
 
   const signOut = async () => {
+    // Quem entrar depois começa no próprio caderno.
+    clearActiveLedger();
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
@@ -75,6 +78,7 @@ export function AuthProvider({
   const deleteAccount = async (): Promise<AuthResult> => {
     const { error } = await supabase.rpc('delete_account');
     if (error) return { error: traduzErro(error.message) };
+    clearActiveLedger();
     await supabase.auth.signOut();
     window.location.href = '/login';
     return { error: null };

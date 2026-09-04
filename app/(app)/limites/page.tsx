@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { CategoryIcon } from '../../../src/components/CategoryIcon';
 import { useData } from '../../../src/context/DataContext';
+import { useLedger } from '../../../src/context/LedgerContext';
 import { useT } from '../../../src/i18n';
 import { useTheme } from '../../../src/theme/ThemeContext';
 import { formatBRL, maskCurrencyInput, rawToReais } from '../../../src/utils/currency';
@@ -14,6 +15,7 @@ export default function LimitesPage() {
   const { colors } = useTheme();
   const t = useT();
   const { budgets, expenses, categories, categoriesWithSubs, setBudget, deleteBudget } = useData();
+  const { canWrite } = useLedger();
 
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('month');
@@ -47,7 +49,8 @@ export default function LimitesPage() {
         {t.web.limitsTitle}
       </h1>
 
-      {/* Form novo limite */}
+      {/* Form novo limite — quem só visualiza não define teto de gasto. */}
+      {canWrite && (
       <div className="mb-8 rounded-2xl p-5" style={{ backgroundColor: colors.card }}>
         <div className="mb-4 font-bold" style={{ color: colors.text }}>
           {t.web.setLimit}
@@ -102,6 +105,7 @@ export default function LimitesPage() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Lista de limites */}
       {alerts.length === 0 ? (
@@ -132,6 +136,7 @@ export default function LimitesPage() {
                       {t.web.spentOf(formatBRL(a.spent), formatBRL(a.budget.limit_amount))}
                     </div>
                   </div>
+                  {canWrite && (
                   <button
                     onClick={() => deleteBudget(a.budget.id)}
                     className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:opacity-70"
@@ -140,6 +145,7 @@ export default function LimitesPage() {
                   >
                     <AppIcon icon="trash-can-outline" size={16} color={colors.danger} />
                   </button>
+                  )}
                 </div>
                 <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: colors.surface }}>
                   <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: c }} />

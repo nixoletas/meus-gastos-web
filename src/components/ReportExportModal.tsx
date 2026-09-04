@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { useLedger } from '../context/LedgerContext';
 import { useI18n } from '../i18n';
 import { monthName } from '../utils/date';
 import { useTheme } from '../theme/ThemeContext';
@@ -29,6 +30,8 @@ type ReportResult = {
 export function ReportExportModal({ open, onClose, userEmail }: Props) {
   const { colors } = useTheme();
   const { t, lang } = useI18n();
+  // Exporta o caderno que está aberto, não a união dos compartilhados.
+  const { ownerId } = useLedger();
   const now = new Date();
   const [kind, setKind] = useState<Kind>('month');
   const [year, setYear] = useState(now.getFullYear());
@@ -57,7 +60,7 @@ export function ReportExportModal({ open, onClose, userEmail }: Props) {
   async function generate(send: boolean): Promise<ReportResult | null> {
     const supabase = createClient();
     const { data, error } = await supabase.functions.invoke<ReportResult>('export-report', {
-      body: { period: kind, year, month: month + 1, send, lang },
+      body: { period: kind, year, month: month + 1, send, lang, owner_id: ownerId },
     });
     if (error) {
       let msg = error.message;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useLedger } from '../context/LedgerContext';
 import { useT } from '../i18n';
 import { ParseResult } from '../lib/receipts';
 import { useReceipt } from '../lib/useReceipt';
@@ -46,6 +47,8 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const t = useT();
   const { categoriesWithSubs, addExpense, saveExpenseWithItems, updateExpense, deleteExpense } =
     useData();
+  // Caderno de outra pessoa em modo leitura: o modal vira detalhe do gasto.
+  const { canWrite } = useLedger();
 
   const [raw, setRaw] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -108,7 +111,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
 
   const amount = rawToReais(raw);
   const selectedParent = categoriesWithSubs.find((c) => c.id === categoryId);
-  const canSave = amount > 0 && categoryId;
+  const canSave = amount > 0 && categoryId && canWrite;
 
   const quickDates = useMemo(() => {
     const today = new Date();
@@ -349,10 +352,11 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         onRemove={receiptState.remove}
         onChangeItems={receiptState.setItems}
         onUseItemsTotal={(value) => setRaw(reaisToRaw(value))}
+        readOnly={!canWrite}
       />
 
       <div className="mt-6 flex items-center gap-3">
-        {expense && (
+        {expense && canWrite && (
           <button
             onClick={() => setConfirmDelete(true)}
             className="rounded-xl px-4 py-3 text-sm font-bold transition hover:opacity-80"
@@ -361,7 +365,7 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
             {t.common.delete}
           </button>
         )}
-        {!expense && (
+        {!expense && canWrite && (
           <button
             onClick={() => handleSave({ keepOpen: true })}
             disabled={!canSave || saving}
@@ -373,14 +377,16 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
             {t.expense.saveAndNew}
           </button>
         )}
-        <button
-          onClick={() => handleSave()}
-          disabled={!canSave || saving}
-          className={`${expense ? 'ml-auto' : ''} rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50`}
-          style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
-        >
-          {saving ? t.web.saving : expense ? t.common.save : t.web.add}
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => handleSave()}
+            disabled={!canSave || saving}
+            className={`${expense ? 'ml-auto' : ''} rounded-xl px-6 py-3 font-bold transition hover:opacity-90 disabled:opacity-50`}
+            style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+          >
+            {saving ? t.web.saving : expense ? t.common.save : t.web.add}
+          </button>
+        )}
       </div>
 
       <ConfirmDialog

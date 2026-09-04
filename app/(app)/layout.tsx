@@ -8,7 +8,9 @@ import { AppIcon } from '../../src/components/AppIcon';
 import { hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseModal } from '../../src/components/ExpenseModal';
 import { PiggyMark } from '../../src/components/Mascot';
+import { SharedLedgerBanner } from '../../src/components/SharedLedgerBanner';
 import { useAuth } from '../../src/context/AuthContext';
+import { useLedger } from '../../src/context/LedgerContext';
 import { useT } from '../../src/i18n';
 import { useTheme } from '../../src/theme/ThemeContext';
 
@@ -25,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
   const t = useT();
   const { user, loading } = useAuth();
+  const { canWrite } = useLedger();
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
 
@@ -65,13 +68,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <PiggyMark size={28} /> Meus Gastos
         </div>
 
-        <button
-          onClick={() => setNewOpen(true)}
-          className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold transition hover:opacity-90"
-          style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
-        >
-          <AppIcon icon="plus" size={20} color={colors.onPrimary} /> {t.web.newExpense}
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => setNewOpen(true)}
+            className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold transition hover:opacity-90"
+            style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+          >
+            <AppIcon icon="plus" size={20} color={colors.onPrimary} /> {t.web.newExpense}
+          </button>
+        )}
 
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {
@@ -122,14 +127,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="flex items-center gap-2 font-extrabold" style={{ color: colors.text }}>
             <PiggyMark size={24} /> Meus Gastos
           </span>
-          <button
-            onClick={() => setNewOpen(true)}
-            className="rounded-lg px-3 py-1.5 text-sm font-bold"
-            style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
-          >
-            {t.web.newShort}
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setNewOpen(true)}
+              className="rounded-lg px-3 py-1.5 text-sm font-bold"
+              style={{ backgroundColor: colors.primary, color: colors.onPrimary }}
+            >
+              {t.web.newShort}
+            </button>
+          )}
         </div>
+
+        <SharedLedgerBanner />
 
         <div className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6 lg:p-10">{children}</div>
 
