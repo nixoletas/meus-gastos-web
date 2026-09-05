@@ -6,9 +6,7 @@ import { useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { hexWithAlpha } from '../../../src/components/CategoryIcon';
 import { Modal } from '../../../src/components/Modal';
-import { ReportExportModal } from '../../../src/components/ReportExportModal';
 import { useAuth } from '../../../src/context/AuthContext';
-import { useLedger } from '../../../src/context/LedgerContext';
 import { useI18n, useT } from '../../../src/i18n';
 import { LANG_LABELS, LANGS } from '../../../src/i18n/active';
 import { CONTACT_EMAIL, FEEDBACK_FORM_URL } from '../../../src/legal/content';
@@ -20,26 +18,15 @@ export default function AjustesPage() {
   const { colors, preference, setPreference } = useTheme();
   const { t, lang, setLang } = useI18n();
   const { user, signOut, deleteAccount } = useAuth();
-  const { members, isShared, activeLedger } = useLedger();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
 
   const meta = (user?.user_metadata ?? {}) as Record<string, string>;
   const avatar = meta.avatar_url ?? meta.picture;
   const name = meta.full_name ?? meta.name;
   const canDelete = confirmText.trim().toLowerCase() === t.settings.deleteConfirmWord;
-
-  // Resumo da linha de Família: de quem é o caderno aberto ou quantas pessoas
-  // acompanham o meu.
-  const ativos = members.filter((m) => m.status === 'active').length;
-  const resumoFamilia = isShared
-    ? t.sharing.subtitleViewing(activeLedger?.ownerName || activeLedger?.ownerEmail || '')
-    : ativos === 0
-      ? t.sharing.subtitleNobody
-      : t.sharing.subtitleCount(ativos);
 
   const themeOptions: { key: ThemePreference; label: string; icon: string }[] = [
     { key: 'light', label: t.settings.themeLight, icon: 'white-balance-sunny' },
@@ -143,45 +130,6 @@ export default function AjustesPage() {
         </button>
       </Section>
 
-      {/* Família: quem mais acompanha estes gastos, e de quem eu acompanho. */}
-      <Section colors={colors} label={t.sharing.section}>
-        <Link href="/familia" className="flex w-full items-center gap-3 text-left transition hover:opacity-80">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: colors.primarySoft }}>
-            <AppIcon icon="account-group" size={22} color={colors.primary} />
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold" style={{ color: colors.text }}>
-              {t.sharing.title}
-            </div>
-            <div className="text-sm" style={{ color: colors.textMuted }}>
-              {resumoFamilia}
-            </div>
-          </div>
-          <AppIcon icon="chevron-right" size={20} color={colors.textMuted} />
-        </Link>
-      </Section>
-
-      {/* Relatórios */}
-      <Section colors={colors} label={t.settings.reports}>
-        <button
-          onClick={() => setReportOpen(true)}
-          className="flex w-full items-center gap-3 text-left transition hover:opacity-80"
-        >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: colors.primarySoft }}>
-            <AppIcon icon="file-excel" size={22} color={colors.primary} />
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold" style={{ color: colors.text }}>
-              {t.settings.exportExcel}
-            </div>
-            <div className="text-sm" style={{ color: colors.textMuted }}>
-              {t.settings.exportExcelSub}
-            </div>
-          </div>
-          <AppIcon icon="chevron-right" size={20} color={colors.textMuted} />
-        </button>
-      </Section>
-
       {/* Sobre */}
       <Section colors={colors} label={t.settings.about}>
         <Row colors={colors} icon="message-text-outline" label={t.settings.feedback} href={FEEDBACK_FORM_URL} external />
@@ -243,7 +191,6 @@ export default function AjustesPage() {
         </button>
       </Modal>
 
-      <ReportExportModal open={reportOpen} onClose={() => setReportOpen(false)} userEmail={user?.email} />
     </div>
   );
 }

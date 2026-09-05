@@ -20,7 +20,7 @@ const NAV = [
   { href: '/categorias', labelKey: 'categories', icon: 'shape' },
   { href: '/limites', labelKey: 'limits', icon: 'target' },
   { href: '/graficos', labelKey: 'charts', icon: 'chart-donut' },
-  { href: '/ajustes', labelKey: 'settings', icon: 'cog' },
+  { href: '/mais', labelKey: 'more', icon: 'dots-horizontal' },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
