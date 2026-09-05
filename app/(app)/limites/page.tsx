@@ -148,8 +148,41 @@ export default function LimitesPage() {
                   )}
                 </div>
                 <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: colors.surface }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: c }} />
+                  <div
+                    className="flex h-full overflow-hidden rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: a.segments.length > 0 ? undefined : c }}
+                  >
+                    {/* Limite geral: cada categoria pinta sua fatia do gasto. */}
+                    {a.segments.map((s) => (
+                      <span
+                        key={s.categoryId ?? '__none__'}
+                        className="h-full"
+                        style={{
+                          width: `${s.share * 100}%`,
+                          backgroundColor: s.category?.color ?? colors.textMuted,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
+                {a.segments.length > 0 && (
+                  <div
+                    className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold"
+                    style={{ color: colors.textMuted }}
+                  >
+                    {a.segments.map((s) => (
+                      <span key={s.categoryId ?? '__none__'} className="flex items-center gap-1.5">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{
+                            backgroundColor: s.category?.color ?? colors.textMuted,
+                          }}
+                        />
+                        {s.category?.name ?? t.common.noCategory} {Math.round(s.share * 100)}%
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {a.level === 'exceeded' && (
                   <div className="mt-2 text-sm font-semibold" style={{ color: colors.danger }}>
                     {t.web.exceededBy(formatBRL(a.spent - a.budget.limit_amount))}

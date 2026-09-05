@@ -232,10 +232,43 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: colors.surface }}>
                       <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${Math.min(Math.max(b.ratio * 100, 3), 100)}%`, backgroundColor: barColor }}
-                      />
+                        className="flex h-full overflow-hidden rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(Math.max(b.ratio * 100, 3), 100)}%`,
+                          backgroundColor: b.segments.length > 0 ? undefined : barColor,
+                        }}
+                      >
+                        {/* Limite geral: cada categoria pinta sua fatia do gasto. */}
+                        {b.segments.map((s) => (
+                          <span
+                            key={s.categoryId ?? '__none__'}
+                            className="h-full"
+                            style={{
+                              width: `${s.share * 100}%`,
+                              backgroundColor: s.category?.color ?? colors.textMuted,
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
+                    {b.segments.length > 0 && (
+                      <div
+                        className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1 text-[11.5px] font-semibold"
+                        style={{ color: colors.textMuted }}
+                      >
+                        {b.segments.map((s) => (
+                          <span key={s.categoryId ?? '__none__'} className="flex items-center gap-1">
+                            <span
+                              className="h-[7px] w-[7px] rounded-full"
+                              style={{
+                                backgroundColor: s.category?.color ?? colors.textMuted,
+                              }}
+                            />
+                            {s.category?.name ?? t.common.noCategory} {Math.round(s.share * 100)}%
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="mt-1 text-xs font-semibold" style={{ color: barColor }}>
                       {b.spent >= b.budget.limit_amount
                         ? t.home.overBy(formatBRL(b.spent - b.budget.limit_amount))
