@@ -140,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <SharedLedgerBanner />
 
-        <div className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6 lg:p-10">{children}</div>
+        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
 
         {/* Nav inferior mobile */}
         <nav
