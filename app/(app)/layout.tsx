@@ -19,7 +19,7 @@ const NAV = [
   { href: '/', labelKey: 'home', icon: 'home' },
   { href: '/categorias', labelKey: 'categories', icon: 'shape' },
   { href: '/limites', labelKey: 'limits', icon: 'target' },
-  { href: '/graficos', labelKey: 'charts', icon: 'chart-donut' },
+  { href: '/visualizar', labelKey: 'charts', icon: 'chart-box-outline' },
   { href: '/mais', labelKey: 'more', icon: 'dots-horizontal' },
 ] as const;
 

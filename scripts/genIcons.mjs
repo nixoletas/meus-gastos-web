@@ -94,6 +94,11 @@ const UI = [
   'cash-multiple', 'dots-horizontal', 'emoticon-happy-outline', 'loading', 'tag',
   'eye', 'eye-off', 'file-excel', 'calendar-blank-multiple', 'email-fast', 'download',
   'translate', 'alphabetical-variant',
+  // Meios de pagamento, local do gasto e a página Visualizar.
+  'barcode', 'credit-card-outline', 'credit-card-multiple', 'credit-card-multiple-outline',
+  'wallet-outline', 'lightning-bolt', 'map-marker-outline', 'map-marker-radius', 'google-maps',
+  'content-paste', 'history', 'chart-bar', 'chart-box-outline', 'calendar-week',
+  'format-list-bulleted', 'magnify', 'close-circle', 'close',
 ];
 
 const names = [...new Set([...CATALOG, ...CATALOG_EXTRA, ...DEFAULTS, ...UI])].sort();

@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { AppIcon } from '../../src/components/AppIcon';
 import { CategoryIcon, hexWithAlpha } from '../../src/components/CategoryIcon';
 import { ExpenseModal } from '../../src/components/ExpenseModal';
+import { ExpenseRow } from '../../src/components/ExpenseRow';
 import { PiggyMark } from '../../src/components/Mascot';
 import { PeriodSwitcher } from '../../src/components/PeriodSwitcher';
 import { useAuth } from '../../src/context/AuthContext';
@@ -24,7 +25,7 @@ import {
 export default function DashboardPage() {
   const { colors } = useTheme();
   const t = useT();
-  const { expenses, categories, budgets, getCategory, loading, hideValue, setHideValue } =
+  const { expenses, categories, budgets, loading, hideValue, setHideValue } =
     useData();
   const { session } = useAuth();
   const [date, setDate] = useState(new Date());
@@ -306,42 +307,9 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.card }}>
-                {items.map((e, i) => {
-                  const cat = getCategory(e.subcategory_id) ?? getCategory(e.category_id);
-                  const parent = cat?.parent_id ? getCategory(cat.parent_id) : cat;
-                  return (
-                    <button
-                      key={e.id}
-                      onClick={() => setEditing(e)}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:opacity-80"
-                      style={{ borderTop: i > 0 ? `1px solid ${colors.border}` : undefined }}
-                    >
-                      <CategoryIcon icon={cat?.icon ?? 'tag'} color={parent?.color ?? colors.textMuted} size={42} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold" style={{ color: colors.text }}>
-                          {cat?.name ?? t.common.noCategory}
-                        </div>
-                        {(e.note || e.items_count > 0 || e.has_receipt) && (
-                          <div className="flex items-center gap-2 text-sm" style={{ color: colors.textMuted }}>
-                            {e.note && <span className="truncate">{e.note}</span>}
-                            {/* Gasto com notinha mostra o que tem dentro sem precisar abrir. */}
-                            {(e.items_count > 0 || e.has_receipt) && (
-                              <span
-                                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"
-                                style={{ backgroundColor: colors.surface }}
-                              >
-                                {e.items_count > 0
-                                  ? t.expenseRow.itemsCount(e.items_count)
-                                  : t.common.receipt}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="font-bold" style={{ color: colors.text }}>{formatBRL(e.amount)}</div>
-                    </button>
-                  );
-                })}
+                {items.map((e, i) => (
+                  <ExpenseRow key={e.id} expense={e} first={i === 0} onClick={() => setEditing(e)} />
+                ))}
               </div>
             </div>
           ))}

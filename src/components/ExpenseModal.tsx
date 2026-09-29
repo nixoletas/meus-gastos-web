@@ -9,12 +9,17 @@ import { useReceipt } from '../lib/useReceipt';
 import { useTheme } from '../theme/ThemeContext';
 import { Expense } from '../types';
 import { formatBRL, maskCurrencyInput, rawToReais, reaisToRaw } from '../utils/currency';
+import { knownPlaces } from '../utils/analytics';
 import { fromISODate, relativeDayLabel, toISODate } from '../utils/date';
+import { paymentLabel } from '../utils/payment';
 import { AppIcon } from './AppIcon';
 import { Calendar } from './Calendar';
 import { hexWithAlpha } from './CategoryIcon';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Modal } from './Modal';
+import { PaymentLogo } from './PaymentLogo';
+import { PaymentMethodModal } from './PaymentMethodModal';
+import { PlaceField } from './PlaceField';
 import { ReceiptFields } from './ReceiptFields';
 import { SuccessFlash } from './SuccessFlash';
 
@@ -42,11 +47,35 @@ function rememberDate(iso: string) {
   window.sessionStorage.setItem(LAST_DATE_KEY, iso);
 }
 
+const LAST_PAYMENT_KEY = 'mg:ultimo-pagamento';
+
+/**
+ * Último meio de pagamento usado num lançamento novo: quem paga quase tudo no
+ * mesmo cartão não escolhe de novo a cada gasto. Mesma vida da data: a aba.
+ */
+function readRememberedPayment(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.sessionStorage.getItem(LAST_PAYMENT_KEY);
+}
+
+function rememberPayment(id: string | null) {
+  if (typeof window === 'undefined') return;
+  if (id) window.sessionStorage.setItem(LAST_PAYMENT_KEY, id);
+  else window.sessionStorage.removeItem(LAST_PAYMENT_KEY);
+}
+
 export function ExpenseModal({ open, onClose, expense }: Props) {
   const { colors } = useTheme();
   const t = useT();
-  const { categoriesWithSubs, addExpense, saveExpenseWithItems, updateExpense, deleteExpense } =
-    useData();
+  const {
+    categoriesWithSubs,
+    expenses,
+    paymentMethods,
+    addExpense,
+    saveExpenseWithItems,
+    updateExpense,
+    deleteExpense,
+  } = useData();
   // Caderno de outra pessoa em modo leitura: o modal vira detalhe do gasto.
   const { canWrite } = useLedger();
 
@@ -55,6 +84,10 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
   const [subId, setSubId] = useState<string | null>(null);
   const [date, setDate] = useState(toISODate(new Date()));
   const [note, setNote] = useState('');
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
+  const [place, setPlace] = useState('');
+  const [placeUrl, setPlaceUrl] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -74,6 +107,17 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       // Só preenche o que está vazio: o que a pessoa digitou vale mais que o OCR.
       const total = Number(result.receipt.total ?? result.itemsTotal) || 0;
       if (total > 0) setRaw((current) => (current ? current : reaisToRaw(total)));
+
+      // Mercado da nota vira o "onde", se ainda estiver em branco.
+      const merchant = result.receipt.merchant?.trim();
+      if (merchant) setPlace((current) => (current.trim() ? current : merchant));
+
+      // Forma lida da nota ("credito", "pix"...) escolhe o meio, se só um casar.
+      const kind = result.receipt.payment_method;
+      if (kind) {
+        const matches = paymentMethods.filter((p) => p.kind === kind);
+        if (matches.length === 1) setPaymentMethodId((current) => current ?? matches[0].id);
+      }
 
       const issued = result.receipt.issued_at ? new Date(result.receipt.issued_at) : null;
       if (!dateTouched && issued && !Number.isNaN(issued.getTime()) && issued <= new Date()) {
@@ -100,14 +144,25 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       setSubId(expense.subcategory_id);
       setDate(expense.occurred_at.split('T')[0]);
       setNote(expense.note ?? '');
+      setPaymentMethodId(expense.payment_method_id ?? null);
+      setPlace(expense.place ?? '');
+      setPlaceUrl(expense.place_url ?? null);
     } else {
       setRaw('');
       setCategoryId(null);
       setSubId(null);
       setDate(readRememberedDate() ?? toISODate(new Date()));
       setNote('');
+      const remembered = readRememberedPayment();
+      setPaymentMethodId(paymentMethods.some((p) => p.id === remembered) ? remembered : null);
+      setPlace('');
+      setPlaceUrl(null);
     }
+    // `paymentMethods` fica de fora: mudar a lista não pode resetar o formulário aberto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, expense]);
+
+  const placeSuggestions = useMemo(() => knownPlaces(expenses), [expenses]);
 
   const amount = rawToReais(raw);
   const selectedParent = categoriesWithSubs.find((c) => c.id === categoryId);
@@ -134,6 +189,9 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
       category_id: categoryId,
       subcategory_id: subId,
       occurred_at: date,
+      payment_method_id: paymentMethodId,
+      place: place.trim() || null,
+      place_url: placeUrl,
     };
     // Com notinha ou subcompras o gasto vai por RPC: gasto, itens e foto entram
     // numa transação só. `items_count` cobre o caso de o usuário ter apagado
@@ -165,12 +223,15 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         : await addExpense(payload);
       if (created) receiptState.markSaved();
       rememberDate(date);
+      rememberPayment(paymentMethodId);
     }
     setSaving(false);
     if (keepOpen && !expense) {
       setFlash({ id: Date.now(), label: t.expense.flashSaved(formatBRL(amount)) });
       setRaw('');
       setNote('');
+      setPlace('');
+      setPlaceUrl(null);
       receiptState.reset();
       amountRef.current?.focus();
       return;
@@ -325,6 +386,56 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         </div>
       )}
 
+      {/* Meio de pagamento */}
+      <Label>
+        {t.payment.label} <span style={{ textTransform: 'none' }}>{t.expense.optional}</span>
+      </Label>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {paymentMethods.map((pm) => {
+          const active = pm.id === paymentMethodId;
+          return (
+            <button
+              key={pm.id}
+              type="button"
+              onClick={() => setPaymentMethodId(active ? null : pm.id)}
+              className="flex max-w-full items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm font-semibold transition"
+              style={{
+                backgroundColor: active ? hexWithAlpha(pm.color, 0.16) : colors.surface,
+                borderColor: active ? pm.color : colors.border,
+                color: active ? colors.text : colors.textMuted,
+              }}
+            >
+              <PaymentLogo provider={pm.provider} kind={pm.kind} color={pm.color} size={24} />
+              <span className="truncate">{paymentLabel(pm, t)}</span>
+            </button>
+          );
+        })}
+        {canWrite && (
+          <button
+            type="button"
+            onClick={() => setPaymentModalOpen(true)}
+            className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
+            style={{ borderColor: colors.primary, color: colors.primary }}
+          >
+            <AppIcon icon="plus" size={16} color={colors.primary} />
+            {t.payment.add}
+          </button>
+        )}
+      </div>
+
+      {/* Onde foi */}
+      <Label>
+        {t.place.label} <span style={{ textTransform: 'none' }}>{t.expense.optional}</span>
+      </Label>
+      <PlaceField
+        place={place}
+        placeUrl={placeUrl}
+        onChangePlace={setPlace}
+        onChangePlaceUrl={setPlaceUrl}
+        suggestions={placeSuggestions}
+        readOnly={!canWrite}
+      />
+
       {/* Nota */}
       <Label>{t.web.noteOptional}</Label>
       <input
@@ -396,6 +507,12 @@ export function ExpenseModal({ open, onClose, expense }: Props) {
         busy={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <PaymentMethodModal
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onCreated={(created) => setPaymentMethodId(created.id)}
       />
 
       {flash && (
