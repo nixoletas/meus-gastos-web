@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { AppIcon } from '../../../src/components/AppIcon';
 import { ReportExportModal } from '../../../src/components/ReportExportModal';
 import { useAuth } from '../../../src/context/AuthContext';
+import { useData } from '../../../src/context/DataContext';
 import { useLedger } from '../../../src/context/LedgerContext';
 import { useT } from '../../../src/i18n';
 import { useTheme } from '../../../src/theme/ThemeContext';
@@ -19,6 +20,7 @@ export default function MaisPage() {
   const { user } = useAuth();
   const { members, isShared, activeLedger } = useLedger();
   const [reportOpen, setReportOpen] = useState(false);
+  const { paymentMethods } = useData();
 
   // Resumo da linha de Família: de quem é o caderno aberto ou quantas pessoas
   // acompanham o meu.
@@ -44,6 +46,23 @@ export default function MaisPage() {
             </div>
             <div className="text-sm" style={{ color: colors.textMuted }}>
               {resumoFamilia}
+            </div>
+          </div>
+          <AppIcon icon="chevron-right" size={20} color={colors.textMuted} />
+        </Link>
+
+        <div className="my-3 ml-14 h-px" style={{ backgroundColor: colors.border }} />
+
+        <Link href="/pagamentos" className="flex w-full items-center gap-3 text-left transition hover:opacity-80">
+          <RowIcon icon="credit-card-multiple-outline" colors={colors} />
+          <div className="flex-1">
+            <div className="font-semibold" style={{ color: colors.text }}>
+              {t.payment.manageTitle}
+            </div>
+            <div className="text-sm" style={{ color: colors.textMuted }}>
+              {paymentMethods.length > 0
+                ? t.payment.manageSubCount(paymentMethods.length)
+                : t.payment.manageSub}
             </div>
           </div>
           <AppIcon icon="chevron-right" size={20} color={colors.textMuted} />
